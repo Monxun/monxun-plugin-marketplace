@@ -1,0 +1,41 @@
+{
+  "name": "monxun-plugin-marketplace",
+  "owner": {
+    "name": "Monxun",
+    "email": "devtools@example.com"
+  },
+  "plugins": [
+    {
+      "name": "plugin-factory",
+      "source": "./plugins/plugin-factory"
+    },
+    {
+      "name": "heuristics-framework",
+      "source": "./plugins/heuristics-framework"
+    },
+    {
+      "name": "akashic-knowledge",
+      "source": "./plugins/akashic-knowledge"
+    },
+    {
+      "name": "flutter-firebase-deploy",
+      "source": "./plugins/flutter-firebase-deploy"
+    },
+    {
+      "name": "rlm-infinite-context",
+      "source": "./plugins/rlm-infinite-context"
+    },
+    {
+      "name": "genesis",
+      "source": "./plugins/genesis"
+    },
+    {
+      "name": "dev-workflow-automation",
+      "source": "./plugins/dev-workflow-automation"
+    },
+    {
+      "name": "unity-vr-dev",
+      "source": "./plugins/unity-vr-dev"
+    }
+  ]
+}

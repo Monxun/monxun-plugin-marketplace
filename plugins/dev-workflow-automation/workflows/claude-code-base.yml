@@ -1,0 +1,332 @@
+# Claude Code Base - Reusable Workflow
+#
+# This is a reusable workflow that provides the core Claude Code execution
+# capability for other workflows in this plugin.
+#
+# ============================================================
+# EXECUTION MODEL: Self-Hosted Claude Code CLI
+# ============================================================
+#
+# This workflow uses the Claude Code CLI directly on a self-hosted runner,
+# NOT the anthropics/claude-code-action API-based GitHub Action.
+#
+# WHY SELF-HOSTED CLI INSTEAD OF API ACTION?
+# ------------------------------------------
+# | Aspect           | API Action                 | Self-Hosted CLI            |
+# |------------------|----------------------------|----------------------------|
+# | Authentication   | ANTHROPIC_API_KEY secret   | Your Max subscription      |
+# | Execution        | GitHub-hosted runner       | Your self-hosted runner    |
+# | Configuration    | Limited to action inputs   | Full .claude/ config       |
+# | Skills/Plugins   | Not available              | All installed plugins      |
+# | Cost             | Per-token API billing      | Included in subscription   |
+# | Context          | Fresh each run             | Persistent across runs     |
+#
+# REQUIREMENTS:
+# - Self-hosted runner with Claude Code CLI installed and authenticated
+# - Runner labels: [self-hosted, macOS, ARM64]
+# - Claude Code authenticated via `claude auth login` on the runner
+#
+# ============================================================
+
+name: Claude Code Base
+
+on:
+  workflow_call:
+    inputs:
+      prompt:
+        description: 'The prompt to send to Claude Code'
+        required: false
+        type: string
+      prompt_file:
+        description: 'Path to a file containing the prompt (alternative to inline prompt)'
+        required: false
+        type: string
+      branch_name:
+        description: 'The branch to work on'
+        required: true
+        type: string
+      base_branch:
+        description: 'The base branch for reference'
+        required: false
+        type: string
+        default: 'develop'
+      max_turns:
+        description: 'Maximum conversation turns'
+        required: false
+        type: number
+        default: 15
+      allow_edits:
+        description: 'Allow Claude to edit files'
+        required: false
+        type: boolean
+        default: true
+      working_directory:
+        description: 'Working directory for execution'
+        required: false
+        type: string
+        default: '.'
+      commit_changes:
+        description: 'Automatically commit changes after execution'
+        required: false
+        type: boolean
+        default: false
+      commit_message:
+        description: 'Commit message (if commit_changes is true)'
+        required: false
+        type: string
+        default: 'chore: automated changes by Claude Code'
+      run_tests:
+        description: 'Run tests after Claude execution'
+        required: false
+        type: boolean
+        default: false
+    outputs:
+      changes_made:
+        description: 'Whether any files were modified'
+        value: ${{ jobs.claude-code.outputs.changes_made }}
+      files_modified:
+        description: 'List of modified files (comma-separated)'
+        value: ${{ jobs.claude-code.outputs.files_modified }}
+      execution_success:
+        description: 'Whether Claude execution succeeded'
+        value: ${{ jobs.claude-code.outputs.execution_success }}
+      tests_passed:
+        description: 'Whether tests passed (if run_tests was true)'
+        value: ${{ jobs.claude-code.outputs.tests_passed }}
+
+env:
+  CLAUDE_AUTO_MODE: "true"
+
+jobs:
+  claude-code:
+    name: Execute Claude Code
+    runs-on: [self-hosted, macOS, ARM64]
+    outputs:
+      changes_made: ${{ steps.check-changes.outputs.changes_made }}
+      files_modified: ${{ steps.check-changes.outputs.files_modified }}
+      execution_success: ${{ steps.execute.outputs.success }}
+      tests_passed: ${{ steps.run-tests.outputs.passed }}
+    steps:
+      # --------------------------------------------------------
+      # Step 1: Checkout the specified branch
+      # --------------------------------------------------------
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch_name }}
+          fetch-depth: 0
+
+      # --------------------------------------------------------
+      # Step 2: Verify Claude Code CLI is available
+      # --------------------------------------------------------
+      - name: Verify Claude Code CLI
+        run: |
+          echo "::group::Claude Code CLI Verification"
+
+          # Check if claude command exists
+          if ! command -v claude &> /dev/null; then
+            echo "::error::Claude Code CLI not found on this runner"
+            echo "Please install Claude Code: npm install -g @anthropic-ai/claude-code"
+            exit 1
+          fi
+
+          # Check version
+          claude --version || true
+
+          # Verify authentication (this will fail if not logged in)
+          echo "Checking authentication status..."
+          if ! claude auth status 2>/dev/null; then
+            echo "::warning::Claude Code may not be authenticated. Run 'claude auth login' on the runner."
+          fi
+
+          echo "::endgroup::"
+
+      # --------------------------------------------------------
+      # Step 3: Prepare the prompt
+      # --------------------------------------------------------
+      - name: Prepare Prompt
+        id: prepare-prompt
+        working-directory: ${{ inputs.working_directory }}
+        run: |
+          echo "::group::Preparing Prompt"
+
+          if [ -n "${{ inputs.prompt_file }}" ] && [ -f "${{ inputs.prompt_file }}" ]; then
+            echo "Using prompt from file: ${{ inputs.prompt_file }}"
+            cp "${{ inputs.prompt_file }}" .claude-execution-prompt.md
+          elif [ -n "${{ inputs.prompt }}" ]; then
+            echo "Using inline prompt"
+            cat > .claude-execution-prompt.md << 'PROMPT_EOF'
+          ${{ inputs.prompt }}
+          PROMPT_EOF
+          else
+            echo "::error::No prompt provided. Specify either 'prompt' or 'prompt_file' input."
+            exit 1
+          fi
+
+          echo "Prompt prepared:"
+          head -20 .claude-execution-prompt.md
+          echo "..."
+
+          echo "::endgroup::"
+
+      # --------------------------------------------------------
+      # Step 4: Execute Claude Code CLI
+      # --------------------------------------------------------
+      - name: Execute Claude Code
+        id: execute
+        working-directory: ${{ inputs.working_directory }}
+        run: |
+          echo "::group::Claude Code Execution"
+
+          # Build the claude command
+          CLAUDE_ARGS="--print --max-turns ${{ inputs.max_turns }}"
+
+          # Add permission flags based on allow_edits
+          if [ "${{ inputs.allow_edits }}" == "true" ]; then
+            CLAUDE_ARGS="$CLAUDE_ARGS --dangerously-skip-permissions"
+          fi
+
+          echo "Executing: cat .claude-execution-prompt.md | claude $CLAUDE_ARGS"
+
+          # Execute and capture output
+          set +e
+          cat .claude-execution-prompt.md | claude $CLAUDE_ARGS 2>&1 | tee .claude-output.txt
+          EXIT_CODE=${PIPESTATUS[1]}
+          set -e
+
+          echo "::endgroup::"
+
+          if [ $EXIT_CODE -eq 0 ]; then
+            echo "success=true" >> $GITHUB_OUTPUT
+            echo "::notice::Claude Code execution completed successfully"
+          else
+            echo "success=false" >> $GITHUB_OUTPUT
+            echo "::warning::Claude Code execution completed with exit code $EXIT_CODE"
+          fi
+
+      # --------------------------------------------------------
+      # Step 5: Check for changes
+      # --------------------------------------------------------
+      - name: Check for Changes
+        id: check-changes
+        working-directory: ${{ inputs.working_directory }}
+        run: |
+          echo "::group::Checking for Changes"
+
+          # Get list of modified files (excluding our temp files)
+          MODIFIED_FILES=$(git status --porcelain | grep -v '\.claude-' | awk '{print $2}' | tr '\n' ',' | sed 's/,$//')
+
+          if [ -n "$MODIFIED_FILES" ]; then
+            echo "changes_made=true" >> $GITHUB_OUTPUT
+            echo "files_modified=$MODIFIED_FILES" >> $GITHUB_OUTPUT
+            echo "Modified files: $MODIFIED_FILES"
+          else
+            echo "changes_made=false" >> $GITHUB_OUTPUT
+            echo "files_modified=" >> $GITHUB_OUTPUT
+            echo "No files were modified"
+          fi
+
+          # Show git status
+          git status --short
+
+          echo "::endgroup::"
+
+      # --------------------------------------------------------
+      # Step 6: Run tests (if requested)
+      # --------------------------------------------------------
+      - name: Run Tests
+        id: run-tests
+        if: inputs.run_tests == true
+        continue-on-error: true
+        run: |
+          echo "::group::Running Tests"
+
+          TESTS_PASSED=true
+
+          # Detect and run appropriate tests
+          if [ -f "backend/atlas-app-rest-api/pom.xml" ]; then
+            echo "Running Maven tests..."
+            cd backend/atlas-app-rest-api
+            if ! ./mvnw test -q; then
+              TESTS_PASSED=false
+            fi
+            cd ../..
+          fi
+
+          if [ -f "frontend/atlas/pubspec.yaml" ]; then
+            echo "Running Flutter tests..."
+            cd frontend/atlas
+            if ! flutter test; then
+              TESTS_PASSED=false
+            fi
+            cd ../..
+          fi
+
+          # Check for other test runners
+          if [ -f "package.json" ] && grep -q '"test"' package.json; then
+            echo "Running npm tests..."
+            if ! npm test; then
+              TESTS_PASSED=false
+            fi
+          fi
+
+          echo "::endgroup::"
+
+          if [ "$TESTS_PASSED" == "true" ]; then
+            echo "passed=true" >> $GITHUB_OUTPUT
+          else
+            echo "passed=false" >> $GITHUB_OUTPUT
+          fi
+
+      # --------------------------------------------------------
+      # Step 7: Commit changes (if requested)
+      # --------------------------------------------------------
+      - name: Commit Changes
+        if: inputs.commit_changes == true && steps.check-changes.outputs.changes_made == 'true'
+        working-directory: ${{ inputs.working_directory }}
+        run: |
+          echo "::group::Committing Changes"
+
+          git config user.name "Claude Code"
+          git config user.email "claude@atlas-ai-labs.com"
+
+          # Add all changes except temp files
+          git add -A
+          git reset -- .claude-execution-prompt.md .claude-output.txt
+
+          # Commit
+          git commit -m "${{ inputs.commit_message }}
+
+          Co-Authored-By: Claude <noreply@anthropic.com>"
+
+          # Push
+          git push
+
+          echo "::endgroup::"
+
+      # --------------------------------------------------------
+      # Step 8: Cleanup temp files
+      # --------------------------------------------------------
+      - name: Cleanup
+        if: always()
+        working-directory: ${{ inputs.working_directory }}
+        run: |
+          rm -f .claude-execution-prompt.md .claude-output.txt
+          git checkout -- .claude-execution-prompt.md .claude-output.txt 2>/dev/null || true
+
+      # --------------------------------------------------------
+      # Step 9: Output summary
+      # --------------------------------------------------------
+      - name: Execution Summary
+        if: always()
+        run: |
+          echo "## Claude Code Execution Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Execution Success | ${{ steps.execute.outputs.success }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Changes Made | ${{ steps.check-changes.outputs.changes_made }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Files Modified | ${{ steps.check-changes.outputs.files_modified || 'None' }} |" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ inputs.run_tests }}" == "true" ]; then
+            echo "| Tests Passed | ${{ steps.run-tests.outputs.passed }} |" >> $GITHUB_STEP_SUMMARY
+          fi

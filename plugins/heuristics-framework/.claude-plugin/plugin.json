@@ -1,0 +1,32 @@
+{
+  "name": "heuristics-framework",
+  "version": "1.0.0",
+  "description": "LLM-based framework for automated heuristic discovery, validation, and documentation using AutoHD, POPPER, and knowledge graph construction methodologies",
+  "author": {
+    "name": "Monxun",
+    "email": "devtools@example.com"
+  },
+  "license": "MIT",
+  "keywords": [
+    "heuristics",
+    "autohd",
+    "popper",
+    "validation",
+    "knowledge-graph",
+    "llm",
+    "hypothesis-testing",
+    "documentation",
+    "multi-agent",
+    "deterministic-inference"
+  ],
+  "commands": "./commands/",
+  "agents": [
+    "./agents/orchestrator.md",
+    "./agents/extractor.md",
+    "./agents/synthesizer.md",
+    "./agents/validator.md",
+    "./agents/documenter.md",
+    "./agents/kg-builder.md"
+  ],
+  "skills": "./skills/"
+}

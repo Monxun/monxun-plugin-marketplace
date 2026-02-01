@@ -1,0 +1,143 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://plugin-factory.dev/schemas/hooks.schema.json",
+  "title": "Hooks Configuration Schema",
+  "description": "Schema for hooks.json per Claude Code official documentation",
+  "type": "object",
+  "properties": {
+    "description": {
+      "type": "string",
+      "description": "Optional description of the hooks configuration"
+    },
+    "hooks": {
+      "type": "object",
+      "properties": {
+        "PreToolUse": {
+          "$ref": "#/definitions/hookEntryArray",
+          "description": "Before tool execution, can block or modify input"
+        },
+        "PostToolUse": {
+          "$ref": "#/definitions/hookEntryArray",
+          "description": "After successful tool execution, can modify result"
+        },
+        "PostToolUseFailure": {
+          "$ref": "#/definitions/hookEntryArray",
+          "description": "After failed tool execution"
+        },
+        "PermissionRequest": {
+          "$ref": "#/definitions/hookEntryArray",
+          "description": "When permission dialog is shown"
+        },
+        "Notification": {
+          "$ref": "#/definitions/hookEntryArray",
+          "description": "On notification events"
+        },
+        "Stop": {
+          "$ref": "#/definitions/hookEntryArray",
+          "description": "When Claude attempts to stop"
+        },
+        "SubagentStart": {
+          "$ref": "#/definitions/hookEntryArray",
+          "description": "When subagent starts"
+        },
+        "SubagentStop": {
+          "$ref": "#/definitions/hookEntryArray",
+          "description": "When subagent completes"
+        },
+        "SessionStart": {
+          "$ref": "#/definitions/hookEntryArray",
+          "description": "When Claude session begins"
+        },
+        "SessionEnd": {
+          "$ref": "#/definitions/hookEntryArray",
+          "description": "When session ends"
+        },
+        "UserPromptSubmit": {
+          "$ref": "#/definitions/hookEntryArray",
+          "description": "When user submits a prompt"
+        },
+        "PreCompact": {
+          "$ref": "#/definitions/hookEntryArray",
+          "description": "Before conversation compaction"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "required": ["hooks"],
+  "additionalProperties": false,
+  "definitions": {
+    "hookEntryArray": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/hookEntry"
+      },
+      "description": "Array of hook entries for an event type"
+    },
+    "hookEntry": {
+      "type": "object",
+      "properties": {
+        "matcher": {
+          "type": "string",
+          "description": "Tool/agent/notification pattern to match (regex supported). Omit for events without matchers (Stop, SessionStart, etc.)"
+        },
+        "hooks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/hookCommand"
+          },
+          "description": "Array of hook commands to execute when matcher matches"
+        }
+      },
+      "required": ["hooks"],
+      "additionalProperties": false
+    },
+    "hookCommand": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["command", "prompt"],
+          "description": "Hook type: 'command' for shell commands, 'prompt' for LLM evaluation"
+        },
+        "command": {
+          "type": "string",
+          "description": "Shell command to execute (use ${CLAUDE_PLUGIN_ROOT} for plugin paths)"
+        },
+        "prompt": {
+          "type": "string",
+          "description": "Prompt for LLM evaluation (use $ARGUMENTS for input). Only for type: 'prompt'"
+        },
+        "timeout": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Timeout in seconds (default: 60)"
+        },
+        "once": {
+          "type": "boolean",
+          "description": "Run hook only once per session (for skills/commands only)"
+        }
+      },
+      "required": ["type"],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": { "type": { "const": "command" } }
+          },
+          "then": {
+            "required": ["command"]
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "prompt" } }
+          },
+          "then": {
+            "required": ["prompt"]
+          }
+        }
+      ]
+    }
+  }
+}

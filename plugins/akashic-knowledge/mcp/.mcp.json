@@ -1,0 +1,23 @@
+{
+  "mcpServers": {
+    "akashic-kb": {
+      "command": "python3",
+      "args": [
+        "servers/kb-server/server.py"
+      ],
+      "cwd": "${pluginDir}/mcp",
+      "env": {
+        "QDRANT_URL": "http://localhost:6333",
+        "NEO4J_URL": "bolt://localhost:7687",
+        "NEO4J_USER": "neo4j",
+        "NEO4J_PASSWORD": "akashic_secure_2026",
+        "ELASTICSEARCH_URL": "http://localhost:9200",
+        "REDIS_URL": "redis://localhost:6379",
+        "AKASHIC_DATA_DIR": "${HOME}/.akashic",
+        "EMBEDDING_MODEL": "text-embedding-3-small",
+        "LOG_LEVEL": "INFO"
+      },
+      "description": "Unified knowledge base MCP server with vector, graph, and keyword search capabilities"
+    }
+  }
+}

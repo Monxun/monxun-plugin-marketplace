@@ -1,0 +1,190 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://unity-vr-dev.plugin/schemas/build-config.schema.json",
+  "title": "Quest Build Configuration",
+  "description": "Configuration schema for Meta Quest IL2CPP builds",
+  "type": "object",
+  "required": [
+    "projectName",
+    "buildTarget",
+    "scriptingBackend",
+    "targetArchitecture",
+    "outputPath"
+  ],
+  "properties": {
+    "projectName": {
+      "type": "string",
+      "description": "Unity project name",
+      "minLength": 1
+    },
+    "buildTarget": {
+      "type": "string",
+      "enum": [
+        "Android"
+      ],
+      "description": "Build target platform (Quest requires Android)"
+    },
+    "scriptingBackend": {
+      "type": "string",
+      "enum": [
+        "IL2CPP"
+      ],
+      "description": "Scripting backend (Quest requires IL2CPP)"
+    },
+    "targetArchitecture": {
+      "type": "string",
+      "enum": [
+        "ARM64"
+      ],
+      "description": "Target architecture (Quest requires ARM64)"
+    },
+    "graphicsApi": {
+      "type": "string",
+      "enum": [
+        "OpenGLES3",
+        "Vulkan"
+      ],
+      "default": "OpenGLES3",
+      "description": "Graphics API"
+    },
+    "colorSpace": {
+      "type": "string",
+      "enum": [
+        "Linear",
+        "Gamma"
+      ],
+      "default": "Linear",
+      "description": "Color space (Linear recommended for VR)"
+    },
+    "minSdkVersion": {
+      "type": "integer",
+      "minimum": 29,
+      "default": 29,
+      "description": "Minimum Android SDK version (Quest 2 requires 29+)"
+    },
+    "buildSystem": {
+      "type": "string",
+      "enum": [
+        "Gradle",
+        "Internal"
+      ],
+      "default": "Gradle",
+      "description": "Android build system"
+    },
+    "gradleCaching": {
+      "type": "boolean",
+      "default": true,
+      "description": "Enable Gradle build caching for faster incremental builds"
+    },
+    "outputPath": {
+      "type": "string",
+      "description": "Output APK file path",
+      "pattern": ".*\\.apk$"
+    },
+    "scenes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "description": "Scene asset path"
+      },
+      "minItems": 1,
+      "description": "Scenes to include in build"
+    },
+    "keystore": {
+      "type": "object",
+      "properties": {
+        "useCustom": {
+          "type": "boolean",
+          "default": false,
+          "description": "Use custom keystore for signing"
+        },
+        "path": {
+          "type": "string",
+          "description": "Path to keystore file"
+        },
+        "alias": {
+          "type": "string",
+          "description": "Key alias name"
+        }
+      },
+      "description": "Keystore signing configuration"
+    },
+    "buildOptions": {
+      "type": "object",
+      "properties": {
+        "development": {
+          "type": "boolean",
+          "default": true,
+          "description": "Development build with debug symbols"
+        },
+        "allowDebugging": {
+          "type": "boolean",
+          "default": true,
+          "description": "Allow script debugging"
+        },
+        "connectWithProfiler": {
+          "type": "boolean",
+          "default": false,
+          "description": "Auto-connect Unity Profiler"
+        },
+        "stripEngineCode": {
+          "type": "boolean",
+          "default": false,
+          "description": "Strip unused engine code for smaller APK"
+        }
+      },
+      "description": "Build options"
+    },
+    "xr": {
+      "type": "object",
+      "properties": {
+        "sdkVersion": {
+          "type": "string",
+          "description": "Meta XR SDK version (e.g., v74)"
+        },
+        "interactionToolkit": {
+          "type": "boolean",
+          "default": true,
+          "description": "Include XR Interaction Toolkit"
+        },
+        "handTracking": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable hand tracking support"
+        },
+        "passthrough": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable passthrough/mixed reality"
+        }
+      },
+      "description": "XR-specific settings"
+    },
+    "deployment": {
+      "type": "object",
+      "properties": {
+        "autoInstall": {
+          "type": "boolean",
+          "default": true,
+          "description": "Auto-install APK after build"
+        },
+        "autoLaunch": {
+          "type": "boolean",
+          "default": true,
+          "description": "Auto-launch app after install"
+        },
+        "packageName": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9]*(\\.[a-z][a-z0-9]*)+$",
+          "description": "Android package name"
+        },
+        "activityName": {
+          "type": "string",
+          "description": "Main activity class name"
+        }
+      },
+      "description": "Post-build deployment settings"
+    }
+  },
+  "additionalProperties": false
+}

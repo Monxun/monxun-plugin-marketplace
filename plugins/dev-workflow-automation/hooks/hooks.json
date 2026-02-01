@@ -1,0 +1,68 @@
+{
+  "$schema": "https://claude.ai/schemas/hooks.json",
+  "description": "Hooks for dev-workflow-automation plugin",
+  "hooks": {
+    "SessionStart": [
+      {
+        "description": "Check for pending auto-fix PRs and recent failures",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/check-pending-fixes.sh"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "description": "Validate commands before execution",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/validate-command.sh"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "description": "Check for secrets in command output",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/validate-no-secrets.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "description": "Validate no secrets in written files",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/validate-file-contents.sh"
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "event": "workflow_failure",
+        "description": "Notify on CI/CD failures",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/notify-failure.sh"
+          }
+        ]
+      }
+    ]
+  },
+  "environment": {
+    "CLAUDE_PLUGIN_ROOT": "${CLAUDE_PLUGIN_ROOT}",
+    "GH_TOKEN": "${GH_TOKEN}",
+    "GITHUB_REPOSITORY": "${GITHUB_REPOSITORY:-Atlas-AI-Labs/Atlas}"
+  }
+}

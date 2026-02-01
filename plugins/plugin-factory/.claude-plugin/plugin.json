@@ -1,0 +1,40 @@
+{
+  "name": "plugin-factory",
+  "version": "1.0.0",
+  "description": "Meta-plugin that generates production-ready Claude Code plugins with research-driven heuristics, multi-agent orchestration, and progressive disclosure patterns",
+  "author": {
+    "name": "Plugin Factory",
+    "email": "contact@plugin-factory.dev",
+    "url": "https://github.com/plugin-factory"
+  },
+  "homepage": "https://github.com/plugin-factory/plugin-factory",
+  "repository": "https://github.com/plugin-factory/plugin-factory",
+  "license": "MIT",
+  "keywords": [
+    "plugin",
+    "generator",
+    "factory",
+    "meta-plugin",
+    "automation",
+    "scaffold",
+    "template",
+    "claude-code",
+    "subagents",
+    "skills",
+    "hooks"
+  ],
+  "commands": "./commands/",
+  "agents": [
+    "./agents/orchestrator.md",
+    "./agents/planner.md",
+    "./agents/clarification.md",
+    "./agents/researcher.md",
+    "./agents/skill-builder.md",
+    "./agents/hook-builder.md",
+    "./agents/agent-builder.md",
+    "./agents/mcp-builder.md",
+    "./agents/validator.md",
+    "./agents/documenter.md"
+  ],
+  "skills": "./skills/"
+}

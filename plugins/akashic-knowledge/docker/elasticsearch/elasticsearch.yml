@@ -1,0 +1,22 @@
+# Elasticsearch Configuration for Akashic Knowledge Plugin
+# Minimal config for ES 8.x
+
+cluster.name: akashic-cluster
+node.name: akashic-es-node
+
+# Network
+network.host: 0.0.0.0
+http.port: 9200
+transport.port: 9300
+
+# Discovery (single-node mode)
+discovery.type: single-node
+
+# Security (disabled for local development)
+xpack.security.enabled: false
+xpack.security.enrollment.enabled: false
+xpack.security.http.ssl.enabled: false
+xpack.security.transport.ssl.enabled: false
+
+# Logging
+logger.level: WARN

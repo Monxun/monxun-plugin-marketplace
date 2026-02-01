@@ -1,0 +1,120 @@
+{
+  "name": "dev-workflow-automation",
+  "version": "1.0.0",
+  "description": "Automated CI/CD failure detection, bug remediation, and feature implementation through GitHub Actions workflows with Claude Code CLI",
+  "author": "Atlas AI Labs",
+  "license": "MIT",
+  "repository": "https://github.com/Atlas-AI-Labs/Atlas",
+  "keywords": [
+    "ci-cd",
+    "automation",
+    "bug-fix",
+    "remediation",
+    "github-actions",
+    "testing",
+    "devops"
+  ],
+  "engines": {
+    "claude-code": ">=1.0.0"
+  },
+  "capabilities": {
+    "commands": true,
+    "agents": true,
+    "skills": true,
+    "hooks": true
+  },
+  "commands": {
+    "auto-fix": {
+      "file": "commands/auto-fix.md",
+      "description": "Manually trigger auto-fix for a CI/CD failure"
+    },
+    "auto-feature": {
+      "file": "commands/auto-feature.md",
+      "description": "Implement a feature from issue or description"
+    },
+    "analyze-failure": {
+      "file": "commands/analyze-failure.md",
+      "description": "Analyze CI failure without creating fix"
+    },
+    "workflow-status": {
+      "file": "commands/workflow-status.md",
+      "description": "Show status of auto-remediation workflows"
+    }
+  },
+  "agents": {
+    "failure-analyzer": {
+      "file": "agents/failure-analyzer.md",
+      "description": "Analyzes CI/CD failures and identifies root causes"
+    },
+    "bug-fixer": {
+      "file": "agents/bug-fixer.md",
+      "description": "Implements bug fixes based on failure analysis"
+    },
+    "feature-implementer": {
+      "file": "agents/feature-implementer.md",
+      "description": "Implements new features based on requirements"
+    }
+  },
+  "skills": {
+    "cicd-remediation": {
+      "file": "skills/cicd-remediation/SKILL.md",
+      "triggers": [
+        "CI failure",
+        "workflow failed",
+        "test failure",
+        "build failed",
+        "fix the build",
+        "fix the pipeline",
+        "pipeline error"
+      ]
+    }
+  },
+  "hooks": {
+    "file": "hooks/hooks.json"
+  },
+  "workflows": {
+    "auto-remediate": {
+      "file": "workflows/auto-remediate.yml",
+      "description": "Main remediation workflow for CI/CD failures"
+    },
+    "feature-request": {
+      "file": "workflows/feature-request.yml",
+      "description": "Feature implementation workflow"
+    },
+    "claude-code-base": {
+      "file": "workflows/claude-code-base.yml",
+      "description": "Reusable Claude Code execution workflow"
+    }
+  },
+  "dependencies": {
+    "cli": ["claude", "gh", "jq"],
+    "runtime": ["python3"]
+  },
+  "configuration": {
+    "maxRetries": {
+      "type": "number",
+      "default": 3,
+      "description": "Maximum retry attempts for auto-fix"
+    },
+    "maxTurns": {
+      "type": "number",
+      "default": 15,
+      "description": "Maximum Claude conversation turns"
+    },
+    "createIssueOnFailure": {
+      "type": "boolean",
+      "default": true,
+      "description": "Create GitHub issue when auto-fix fails"
+    },
+    "commentOnFailedRun": {
+      "type": "boolean",
+      "default": true,
+      "description": "Comment on failed workflow run"
+    },
+    "requirePRApproval": {
+      "type": "boolean",
+      "default": true,
+      "description": "Require human approval before merge"
+    }
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "name": "flutter-firebase-deploy",
+  "version": "1.0.0",
+  "description": "Complete Flutter + Firebase deployment automation plugin. Configures iOS/Android builds, Fastlane, TestFlight, Play Store, GitHub Actions CI/CD, code signing, OAuth providers, and self-hosted Mac Mini runners.",
+  "author": { "name": "monxun" },
+  "license": "MIT",
+  "repository": "https://github.com/monxun/claude-code-plugins",
+  "keywords": [
+    "flutter",
+    "firebase",
+    "deployment",
+    "ios",
+    "android",
+    "fastlane",
+    "testflight",
+    "playstore",
+    "github-actions",
+    "code-signing",
+    "oauth",
+    "ci-cd",
+    "automation"
+  ],
+  "commands": "./commands/",
+  "agents": [
+    "./agents/orchestrator.md",
+    "./agents/flutter-analyzer.md",
+    "./agents/firebase-configurator.md",
+    "./agents/ios-specialist.md",
+    "./agents/android-specialist.md",
+    "./agents/fastlane-specialist.md",
+    "./agents/github-actions-specialist.md",
+    "./agents/signing-specialist.md",
+    "./agents/oauth-configurator.md",
+    "./agents/simulator-tester.md",
+    "./agents/researcher.md",
+    "./agents/validator.md",
+    "./agents/troubleshooter.md"
+  ],
+  "skills": "./skills/"
+}

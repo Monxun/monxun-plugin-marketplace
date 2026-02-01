@@ -1,0 +1,53 @@
+{
+  "$schema": "https://akashic-knowledge.io/schemas/knowledge-base.schema.json",
+  "name": "{{ name }}",
+  "scope": "{{ scope }}",
+  "created_at": "{{ created_at }}",
+  {% if description %}"description": "{{ description }}",{% endif %}
+  "document_count": {{ document_count | default(0) }},
+  "entity_count": {{ entity_count | default(0) }},
+  "heuristic_count": {{ heuristic_count | default(0) }},
+  "collections": [
+    {% for collection in collections %}"{{ collection }}"{% if not loop.last %},{% endif %}
+    {% endfor %}
+  ],
+  "config": {
+    "chunk_size": {{ config.chunk_size | default(750) }},
+    "chunk_overlap": {{ config.chunk_overlap | default(75) }},
+    "embedding_model": "{{ config.embedding_model | default('text-embedding-3-small') }}"
+  },
+  "metadata": {
+    "version": "1.0.0",
+    "plugin_version": "1.0.0",
+    "generator": "akashic-knowledge",
+    {% if metadata %}
+    {% for key, value in metadata.items() %}
+    "{{ key }}": {% if value is string %}"{{ value }}"{% else %}{{ value | tojson }}{% endif %}{% if not loop.last %},{% endif %}
+    {% endfor %}
+    {% endif %}
+  },
+  "indices": {
+    "vector": {
+      "store": "qdrant",
+      "collection": "akashic_{{ name }}",
+      "dimensions": 1536,
+      "distance": "cosine"
+    },
+    "keyword": {
+      "store": "elasticsearch",
+      "index": "akashic_{{ name }}",
+      "analyzer": "standard"
+    },
+    "graph": {
+      "store": "neo4j",
+      "database": "akashic",
+      "namespace": "{{ name }}"
+    }
+  },
+  "statistics": {
+    "last_updated": "{{ last_updated | default(created_at) }}",
+    "ingestion_count": {{ ingestion_count | default(0) }},
+    "query_count": {{ query_count | default(0) }},
+    "discovery_runs": {{ discovery_runs | default(0) }}
+  }
+}

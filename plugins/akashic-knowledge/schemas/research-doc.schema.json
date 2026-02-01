@@ -1,0 +1,239 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://akashic-knowledge.io/schemas/research-doc.schema.json",
+  "title": "Akashic Research Document Schema",
+  "description": "Schema for exported research documents from knowledge bases",
+  "type": "object",
+  "required": [
+    "title",
+    "kb_name",
+    "created_at",
+    "content"
+  ],
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Document title",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "kb_name": {
+      "type": "string",
+      "description": "Source knowledge base name"
+    },
+    "created_at": {
+      "type": "string",
+      "description": "Document creation timestamp",
+      "format": "date-time"
+    },
+    "format": {
+      "type": "string",
+      "description": "Output format",
+      "enum": [
+        "markdown",
+        "json",
+        "jsonld"
+      ],
+      "default": "markdown"
+    },
+    "summary": {
+      "type": "object",
+      "description": "Knowledge base summary statistics",
+      "properties": {
+        "document_count": {
+          "type": "integer"
+        },
+        "entity_count": {
+          "type": "integer"
+        },
+        "heuristic_count": {
+          "type": "integer"
+        },
+        "source_files": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "content": {
+      "type": "object",
+      "description": "Document content sections",
+      "properties": {
+        "findings": {
+          "type": "array",
+          "description": "Key findings from the knowledge base",
+          "items": {
+            "type": "object",
+            "properties": {
+              "title": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "evidence": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "confidence": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              }
+            }
+          }
+        },
+        "patterns": {
+          "type": "array",
+          "description": "Discovered patterns",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "frequency": {
+                "type": "integer"
+              },
+              "examples": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "entities": {
+          "type": "array",
+          "description": "Extracted entities",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string"
+              },
+              "mentions": {
+                "type": "integer"
+              },
+              "relationships": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "target": {
+                      "type": "string"
+                    },
+                    "type": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "heuristics": {
+          "type": "array",
+          "description": "Discovered heuristics",
+          "items": {
+            "$ref": "heuristic.schema.json"
+          }
+        },
+        "recommendations": {
+          "type": "array",
+          "description": "Actionable recommendations",
+          "items": {
+            "type": "object",
+            "properties": {
+              "recommendation": {
+                "type": "string"
+              },
+              "rationale": {
+                "type": "string"
+              },
+              "priority": {
+                "type": "string",
+                "enum": [
+                  "high",
+                  "medium",
+                  "low"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "sources": {
+      "type": "array",
+      "description": "Source citations",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "accessed_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Additional document metadata",
+      "properties": {
+        "author": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "export_config": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    },
+    "@context": {
+      "type": [
+        "string",
+        "object"
+      ],
+      "description": "JSON-LD context for semantic web compatibility"
+    },
+    "@type": {
+      "type": "string",
+      "description": "JSON-LD type"
+    }
+  },
+  "additionalProperties": false
+}

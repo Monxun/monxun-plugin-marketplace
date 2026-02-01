@@ -1,0 +1,106 @@
+{
+  "mcpServers": {
+    "{{SERVER_NAME}}": {
+      "command": "{{COMMAND}}",
+      "args": {{ARGS}},
+      "cwd": "${CLAUDE_PLUGIN_ROOT}",
+      "env": {
+        "{{ENV_VAR_1}}": "{{ENV_VALUE_1}}",
+        "{{ENV_VAR_2}}": "${{{EXTERNAL_ENV_VAR}}}"
+      }
+    }
+  }
+}
+
+// MCP SERVER CONFIGURATION TEMPLATE
+//
+// REQUIRED FIELDS:
+// - command: Executable command (node, python, etc.)
+//
+// OPTIONAL FIELDS:
+// - args: Array of command arguments
+// - cwd: Working directory (use ${CLAUDE_PLUGIN_ROOT})
+// - env: Environment variables
+//
+// TRANSPORT TYPES:
+//
+// 1. STDIO (Default)
+//    Command-line process with stdin/stdout communication
+//    ```json
+//    {
+//      "command": "node",
+//      "args": ["${CLAUDE_PLUGIN_ROOT}/servers/server.js"]
+//    }
+//    ```
+//
+// 2. SSE (Server-Sent Events)
+//    HTTP streaming connection
+//    ```json
+//    {
+//      "command": "npx",
+//      "args": ["mcp-sse-client", "--url", "http://localhost:3000/events"]
+//    }
+//    ```
+//
+// 3. HTTP
+//    REST API connection
+//    ```json
+//    {
+//      "command": "npx",
+//      "args": ["mcp-http-client", "--base-url", "http://localhost:3000"]
+//    }
+//    ```
+//
+// ENVIRONMENT VARIABLES:
+// - Use ${VAR_NAME} for external environment variables
+// - Document all required env vars in README
+//
+// COMMON PATTERNS:
+//
+// Database Server:
+// {
+//   "database": {
+//     "command": "node",
+//     "args": ["${CLAUDE_PLUGIN_ROOT}/servers/db-server.js"],
+//     "env": {
+//       "DB_PATH": "${CLAUDE_PLUGIN_ROOT}/data/app.db",
+//       "READONLY": "true"
+//     }
+//   }
+// }
+//
+// API Client:
+// {
+//   "api-client": {
+//     "command": "node",
+//     "args": ["${CLAUDE_PLUGIN_ROOT}/servers/api-server.js"],
+//     "env": {
+//       "API_BASE_URL": "https://api.example.com",
+//       "API_KEY": "${MY_API_KEY}"
+//     }
+//   }
+// }
+//
+// Python Server:
+// {
+//   "python-server": {
+//     "command": "python",
+//     "args": ["-m", "myserver"],
+//     "cwd": "${CLAUDE_PLUGIN_ROOT}/servers"
+//   }
+// }
+//
+// TOOL NAMING:
+// Tools exposed by MCP servers are accessed as:
+//   mcp__<server-name>__<tool-name>
+// Example:
+//   mcp__database__query
+//   mcp__api-client__fetch
+//
+// BEST PRACTICES:
+// 1. Always use ${CLAUDE_PLUGIN_ROOT} for paths
+// 2. Document required environment variables
+// 3. Use stderr for logging (not stdout)
+// 4. Handle missing config gracefully
+// 5. Implement graceful shutdown
+// 6. Validate config on startup

@@ -1,0 +1,82 @@
+{
+  "$schema": "https://genesis.dev/schemas/manifest.json",
+  "name": "nodejs-api",
+  "version": "1.0.0",
+  "description": "Production-ready Node.js API template with TypeScript, Fastify, and Prisma",
+  "author": {
+    "name": "Genesis",
+    "email": "templates@genesis.dev"
+  },
+  "license": "MIT",
+  "prompts": [
+    {
+      "name": "project_name",
+      "type": "string",
+      "message": "Project name (kebab-case)",
+      "validate": "^[a-z][a-z0-9-]*$"
+    },
+    {
+      "name": "description",
+      "type": "string",
+      "message": "Project description"
+    },
+    {
+      "name": "author_name",
+      "type": "string",
+      "message": "Author name"
+    },
+    {
+      "name": "use_typescript",
+      "type": "boolean",
+      "message": "Use TypeScript?",
+      "default": true
+    },
+    {
+      "name": "framework",
+      "type": "select",
+      "message": "API Framework",
+      "choices": [
+        "fastify",
+        "express",
+        "hono"
+      ],
+      "default": "fastify"
+    },
+    {
+      "name": "database",
+      "type": "select",
+      "message": "Database",
+      "choices": [
+        "postgresql",
+        "mysql",
+        "sqlite",
+        "mongodb",
+        "none"
+      ],
+      "default": "postgresql"
+    },
+    {
+      "name": "use_docker",
+      "type": "boolean",
+      "message": "Include Docker configuration?",
+      "default": true
+    },
+    {
+      "name": "use_ci",
+      "type": "boolean",
+      "message": "Include GitHub Actions CI?",
+      "default": true
+    }
+  ],
+  "conditionals": {
+    "docker/": "use_docker",
+    "prisma/": "database != 'none' && database != 'mongodb'",
+    ".github/": "use_ci"
+  },
+  "postGeneration": [
+    "npm install",
+    "git init",
+    "git add .",
+    "git commit -m 'Initial commit from Genesis template'"
+  ]
+}

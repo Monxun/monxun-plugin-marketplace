@@ -1,0 +1,134 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesis.dev/schemas/genesis-config.schema.json",
+  "title": "Genesis Configuration",
+  "description": "Schema for .genesis.json project configuration",
+  "type": "object",
+  "properties": {
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+",
+      "description": "Genesis version used"
+    },
+    "template": {
+      "type": "string",
+      "description": "Source template name or path"
+    },
+    "variables": {
+      "type": "object",
+      "description": "Variable values used during generation"
+    },
+    "generated": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp of generation"
+    },
+    "exemplar": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Path to exemplar project"
+        },
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL of exemplar repository"
+        },
+        "commit": {
+          "type": "string",
+          "description": "Git commit hash of exemplar"
+        }
+      },
+      "description": "Source exemplar information"
+    },
+    "research": {
+      "type": "object",
+      "properties": {
+        "sources": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "url": {
+                "type": "string",
+                "format": "uri"
+              },
+              "title": {
+                "type": "string"
+              },
+              "fetched": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
+          },
+          "description": "Web sources consulted"
+        },
+        "patterns": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Patterns discovered"
+        }
+      },
+      "description": "Research context"
+    },
+    "customizations": {
+      "type": "object",
+      "properties": {
+        "addedFiles": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "removedFiles": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "modifiedFiles": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Post-generation customizations"
+    },
+    "quality": {
+      "type": "object",
+      "properties": {
+        "structureScore": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "syntaxScore": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "completenessScore": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "securityScore": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "overallScore": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        }
+      },
+      "description": "Quality gate scores"
+    }
+  }
+}

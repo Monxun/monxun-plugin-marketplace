@@ -1,0 +1,103 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://plugin-factory.dev/schemas/plugin-manifest.schema.json",
+  "title": "Claude Code Plugin Manifest",
+  "description": "Schema for .claude-plugin/plugin.json",
+  "type": "object",
+  "required": ["name", "version", "description"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+      "maxLength": 64,
+      "description": "Plugin name in kebab-case"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+",
+      "description": "Semantic version (e.g., 1.0.0)"
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 1024,
+      "description": "Brief plugin description"
+    },
+    "author": {
+      "oneOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "Author name"
+            },
+            "email": {
+              "type": "string",
+              "format": "email",
+              "description": "Author email"
+            },
+            "url": {
+              "type": "string",
+              "format": "uri",
+              "description": "Author website"
+            }
+          },
+          "required": ["name"]
+        }
+      ],
+      "description": "Plugin author"
+    },
+    "repository": {
+      "type": "string",
+      "format": "uri",
+      "description": "Git repository URL"
+    },
+    "keywords": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Search keywords"
+    },
+    "license": {
+      "type": "string",
+      "description": "SPDX license identifier"
+    },
+    "commands": {
+      "type": "string",
+      "description": "Path to commands directory"
+    },
+    "agents": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Array of paths to agent markdown files (NOTE: Claude Code requires array format, not string)"
+    },
+    "skills": {
+      "type": "string",
+      "description": "Path to skills directory"
+    },
+    "hooks": {
+      "type": "string",
+      "description": "Path to hooks.json file"
+    },
+    "mcpServers": {
+      "type": "string",
+      "description": "Path to .mcp.json file"
+    },
+    "engines": {
+      "type": "object",
+      "properties": {
+        "claude-code": {
+          "type": "string",
+          "description": "Required Claude Code version"
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}

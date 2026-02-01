@@ -1,0 +1,236 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://akashic-knowledge.io/schemas/heuristic.schema.json",
+  "title": "Akashic Heuristic Schema",
+  "description": "Schema for discovered heuristic functions and metadata",
+  "type": "object",
+  "required": [
+    "name",
+    "domain",
+    "version",
+    "description",
+    "function"
+  ],
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Unique heuristic identifier",
+      "pattern": "^heuristic_[a-z][a-z0-9_]*$",
+      "minLength": 10,
+      "maxLength": 64
+    },
+    "domain": {
+      "type": "string",
+      "description": "Domain context for the heuristic",
+      "examples": [
+        "code-quality",
+        "security",
+        "api-design",
+        "testing"
+      ]
+    },
+    "version": {
+      "type": "string",
+      "description": "Semantic version of the heuristic",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "description": {
+      "type": "string",
+      "description": "Human-readable description of what the heuristic measures",
+      "minLength": 10,
+      "maxLength": 500
+    },
+    "function": {
+      "type": "string",
+      "description": "Python function code implementing the heuristic"
+    },
+    "inputs": {
+      "type": "array",
+      "description": "Required context keys for the heuristic",
+      "items": {
+        "type": "object",
+        "required": [
+          "key",
+          "type",
+          "description"
+        ],
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "string",
+              "integer",
+              "float",
+              "boolean",
+              "array",
+              "object"
+            ]
+          },
+          "description": {
+            "type": "string"
+          },
+          "required": {
+            "type": "boolean",
+            "default": true
+          }
+        }
+      }
+    },
+    "output": {
+      "type": "object",
+      "description": "Output specification",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "float",
+            "boolean",
+            "string"
+          ],
+          "default": "float"
+        },
+        "range": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "interpretation": {
+          "type": "string"
+        }
+      }
+    },
+    "performance": {
+      "type": "object",
+      "description": "Performance metrics from evaluation",
+      "properties": {
+        "accuracy": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "precision": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "recall": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "f1": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "e_value": {
+          "type": "number",
+          "minimum": 0,
+          "description": "POPPER e-value for statistical significance"
+        },
+        "type_i_error": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Type-I error rate"
+        }
+      }
+    },
+    "evolution": {
+      "type": "object",
+      "description": "Evolution history from AutoHD",
+      "properties": {
+        "iterations": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "parent_heuristics": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "mutations_applied": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "fitness_history": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "iteration": {
+                "type": "integer"
+              },
+              "fitness": {
+                "type": "number"
+              }
+            }
+          }
+        }
+      }
+    },
+    "validation": {
+      "type": "object",
+      "description": "POPPER validation results",
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "validated",
+            "rejected",
+            "inconclusive"
+          ]
+        },
+        "experiments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string"
+              },
+              "n_samples": {
+                "type": "integer"
+              },
+              "e_value": {
+                "type": "number"
+              },
+              "passed": {
+                "type": "boolean"
+              }
+            }
+          }
+        },
+        "validated_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "source_kb": {
+      "type": "string",
+      "description": "Knowledge base this heuristic was derived from"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "additionalProperties": false
+}

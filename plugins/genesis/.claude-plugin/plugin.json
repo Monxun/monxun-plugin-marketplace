@@ -1,0 +1,41 @@
+{
+  "name": "genesis",
+  "version": "1.0.0",
+  "description": "AI-powered code templating and project scaffolding from examples, prompts, and web research",
+  "author": {
+    "name": "Genesis",
+    "email": "contact@genesis.dev",
+    "url": "https://github.com/genesis-templates"
+  },
+  "homepage": "https://github.com/genesis-templates/genesis",
+  "repository": "https://github.com/genesis-templates/genesis",
+  "license": "MIT",
+  "keywords": [
+    "template",
+    "scaffold",
+    "generator",
+    "code-generation",
+    "github-actions",
+    "terraform",
+    "pulumi",
+    "infrastructure",
+    "ci-cd",
+    "project-scaffold",
+    "exemplar",
+    "pattern-extraction"
+  ],
+  "commands": "./commands/",
+  "agents": [
+    "./agents/orchestrator.md",
+    "./agents/exemplar-analyzer.md",
+    "./agents/web-researcher.md",
+    "./agents/pattern-extractor.md",
+    "./agents/template-synthesizer.md",
+    "./agents/workflow-builder.md",
+    "./agents/infra-architect.md",
+    "./agents/genesis-validator.md",
+    "./agents/documenter.md"
+  ],
+  "skills": "./skills/",
+  "hooks": "./hooks/hooks.json"
+}

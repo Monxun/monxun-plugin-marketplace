@@ -1,0 +1,31 @@
+{
+  "name": "unity-vr-dev",
+  "version": "1.0.0",
+  "description": "AI-powered Unity VR development for Meta Quest. Build automation, debug orchestration, voice integration, and testing through Claude Code MCP.",
+  "author": {
+    "name": "monxun"
+  },
+  "keywords": [
+    "unity",
+    "vr",
+    "quest",
+    "meta-xr",
+    "build-automation",
+    "debugging",
+    "voice",
+    "mcp",
+    "il2cpp"
+  ],
+  "license": "MIT",
+  "commands": "./commands/",
+  "agents": [
+    "./agents/orchestrator.md",
+    "./agents/build-agent.md",
+    "./agents/debug-agent.md",
+    "./agents/voice-agent.md",
+    "./agents/test-agent.md",
+    "./agents/knowledge-agent.md"
+  ],
+  "skills": "./skills/",
+  "hooks": "./hooks/hooks.json"
+}

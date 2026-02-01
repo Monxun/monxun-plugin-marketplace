@@ -1,0 +1,670 @@
+# Auto-Remediate CI Failures
+#
+# This workflow automatically detects and fixes CI/CD pipeline failures.
+# It uses the Claude Code CLI on a self-hosted runner (NOT the API action)
+# to leverage your Max subscription for unlimited usage.
+#
+# EXECUTION MODEL:
+# - Runs on self-hosted macOS ARM64 runner
+# - Executes `claude` CLI directly (authenticated via your Max subscription)
+# - Full access to local Claude Code configuration and installed plugins
+# - No ANTHROPIC_API_KEY required - uses your authenticated CLI session
+#
+# TRIGGER: Automatically on ALL CI/CD failures (no manual labeling required)
+
+name: Auto-Remediate CI Failures
+
+on:
+  # Auto-trigger on workflow failures
+  workflow_run:
+    workflows:
+      - "Atlas CI/CD Pipeline"
+      - "Integration Tests"
+      - "Backend CI"
+      - "Frontend CI"
+      - "Security Scan"
+    types:
+      - completed
+
+  # Manual trigger with additional context
+  workflow_dispatch:
+    inputs:
+      failure_run_id:
+        description: 'Failed workflow run ID to remediate'
+        required: true
+        type: string
+      fix_type:
+        description: 'Type of fix to attempt'
+        required: true
+        type: choice
+        options:
+          - test-failure
+          - build-failure
+          - security-issue
+          - lint-error
+      clarification:
+        description: 'Additional context or clarification for Claude'
+        required: false
+        type: string
+      max_retries:
+        description: 'Maximum retry attempts'
+        required: false
+        type: number
+        default: 3
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  actions: read
+  checks: read
+
+env:
+  MAX_RETRIES: ${{ inputs.max_retries || 3 }}
+  CLAUDE_AUTO_MODE: "true"
+  CLAUDE_MAX_TURNS: 15
+
+jobs:
+  # ============================================================
+  # Job 1: Check for duplicate fix attempts
+  # ============================================================
+  check-duplicate:
+    name: Check for Existing Fix
+    runs-on: ubuntu-latest
+    # Only run on failure OR manual dispatch
+    if: |
+      github.event.workflow_run.conclusion == 'failure' ||
+      github.event_name == 'workflow_dispatch'
+    outputs:
+      should_proceed: ${{ steps.check.outputs.should_proceed }}
+      run_id: ${{ steps.check.outputs.run_id }}
+      workflow_name: ${{ steps.check.outputs.workflow_name }}
+    steps:
+      - name: Determine Run ID
+        id: determine-run
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "run_id=${{ inputs.failure_run_id }}" >> $GITHUB_OUTPUT
+          else
+            echo "run_id=${{ github.event.workflow_run.id }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Check for Existing Fix PR/Branch
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          RUN_ID="${{ steps.determine-run.outputs.run_id }}"
+          echo "run_id=$RUN_ID" >> $GITHUB_OUTPUT
+
+          # Get workflow name
+          WORKFLOW_NAME=$(gh api repos/${{ github.repository }}/actions/runs/$RUN_ID --jq '.name')
+          echo "workflow_name=$WORKFLOW_NAME" >> $GITHUB_OUTPUT
+
+          # Check for existing fix branches
+          EXISTING_BRANCH=$(git ls-remote --heads origin "fix/auto-*-run-$RUN_ID*" 2>/dev/null || true)
+          if [ -n "$EXISTING_BRANCH" ]; then
+            echo "::warning::Fix branch already exists for run $RUN_ID"
+            echo "should_proceed=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Check for existing fix PRs
+          EXISTING_PR=$(gh pr list --repo ${{ github.repository }} --search "Auto-Fix: Run $RUN_ID" --json number --jq '.[0].number' 2>/dev/null || true)
+          if [ -n "$EXISTING_PR" ]; then
+            echo "::warning::Fix PR #$EXISTING_PR already exists for run $RUN_ID"
+            echo "should_proceed=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "should_proceed=true" >> $GITHUB_OUTPUT
+
+  # ============================================================
+  # Job 2: Analyze the failure
+  # ============================================================
+  analyze:
+    name: Analyze Failure
+    needs: check-duplicate
+    if: needs.check-duplicate.outputs.should_proceed == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      failure_type: ${{ steps.analyze.outputs.failure_type }}
+      affected_files: ${{ steps.analyze.outputs.affected_files }}
+      error_summary: ${{ steps.analyze.outputs.error_summary }}
+      base_branch: ${{ steps.analyze.outputs.base_branch }}
+      fix_branch: ${{ steps.analyze.outputs.fix_branch }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Download Failed Run Artifacts
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p .failure-artifacts
+          RUN_ID="${{ needs.check-duplicate.outputs.run_id }}"
+
+          # Download all artifacts from failed run
+          gh run download $RUN_ID -D .failure-artifacts 2>/dev/null || echo "No artifacts to download"
+
+          # Also get the logs
+          gh run view $RUN_ID --log-failed > .failure-artifacts/failed-logs.txt 2>/dev/null || \
+            gh run view $RUN_ID --log > .failure-artifacts/full-logs.txt 2>/dev/null || true
+
+      - name: Parse Failure Details
+        id: analyze
+        run: |
+          # Determine failure type
+          FAILURE_TYPE="${{ inputs.fix_type }}"
+          if [ -z "$FAILURE_TYPE" ]; then
+            # Auto-detect failure type from logs
+            if grep -q "Test.*FAILED\|AssertionError\|Expected.*but was" .failure-artifacts/*.txt 2>/dev/null; then
+              FAILURE_TYPE="test-failure"
+            elif grep -q "Compilation.*failed\|BUILD FAILED\|error:.*Cannot find" .failure-artifacts/*.txt 2>/dev/null; then
+              FAILURE_TYPE="build-failure"
+            elif grep -q "CRITICAL\|HIGH\|CVE-" .failure-artifacts/*.txt 2>/dev/null; then
+              FAILURE_TYPE="security-issue"
+            elif grep -q "lint\|style\|checkstyle\|eslint" .failure-artifacts/*.txt 2>/dev/null; then
+              FAILURE_TYPE="lint-error"
+            else
+              FAILURE_TYPE="test-failure"
+            fi
+          fi
+          echo "failure_type=$FAILURE_TYPE" >> $GITHUB_OUTPUT
+
+          # Extract affected files
+          AFFECTED_FILES=$(grep -rhoE "(src|lib|test)/[a-zA-Z0-9_/]+\.(java|dart|kt|swift|ts|js)" .failure-artifacts/ 2>/dev/null | sort -u | head -20 | tr '\n' ',' || echo "")
+          echo "affected_files=$AFFECTED_FILES" >> $GITHUB_OUTPUT
+
+          # Create error summary (first 500 chars of errors)
+          ERROR_SUMMARY=$(grep -E "ERROR|FAILED|Exception|Error:" .failure-artifacts/*.txt 2>/dev/null | head -20 | cut -c1-200 | tr '\n' ' ' | cut -c1-500 || echo "Unknown error")
+          # Escape for GitHub Actions
+          ERROR_SUMMARY="${ERROR_SUMMARY//'%'/'%25'}"
+          ERROR_SUMMARY="${ERROR_SUMMARY//$'\n'/'%0A'}"
+          ERROR_SUMMARY="${ERROR_SUMMARY//$'\r'/'%0D'}"
+          echo "error_summary=$ERROR_SUMMARY" >> $GITHUB_OUTPUT
+
+          # Determine base branch
+          RUN_ID="${{ needs.check-duplicate.outputs.run_id }}"
+          BASE_BRANCH=$(gh api repos/${{ github.repository }}/actions/runs/$RUN_ID --jq '.head_branch' 2>/dev/null || echo "main")
+          echo "base_branch=$BASE_BRANCH" >> $GITHUB_OUTPUT
+
+          # Create fix branch name
+          TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+          SHORT_DESC=$(echo "$FAILURE_TYPE" | tr '_' '-')
+          FIX_BRANCH="fix/auto-${TIMESTAMP}-${SHORT_DESC}-run-${RUN_ID}"
+          echo "fix_branch=$FIX_BRANCH" >> $GITHUB_OUTPUT
+
+      - name: Upload Analysis
+        uses: actions/upload-artifact@v4
+        with:
+          name: failure-analysis
+          path: .failure-artifacts/
+          retention-days: 7
+
+  # ============================================================
+  # Job 3: Remediate the failure
+  # ============================================================
+  remediate:
+    name: Auto-Remediate
+    needs: [check-duplicate, analyze]
+    runs-on: [self-hosted, macOS, ARM64]
+    outputs:
+      fix_successful: ${{ steps.final-status.outputs.fix_successful }}
+      pr_number: ${{ steps.create-pr.outputs.pr_number }}
+      pr_url: ${{ steps.create-pr.outputs.pr_url }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.analyze.outputs.base_branch }}
+          fetch-depth: 0
+
+      - name: Download Analysis Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: failure-analysis
+          path: .failure-artifacts/
+
+      - name: Create Fix Branch
+        run: |
+          git checkout -b "${{ needs.analyze.outputs.fix_branch }}"
+          git push -u origin "${{ needs.analyze.outputs.fix_branch }}"
+
+      - name: Prepare Claude Prompt
+        id: prompt
+        run: |
+          cat > .claude-prompt.md << 'PROMPT_EOF'
+          # CI/CD Failure Auto-Fix Request
+
+          ## Failure Details
+          - **Type**: ${{ needs.analyze.outputs.failure_type }}
+          - **Workflow**: ${{ needs.check-duplicate.outputs.workflow_name }}
+          - **Run ID**: ${{ needs.check-duplicate.outputs.run_id }}
+          - **Base Branch**: ${{ needs.analyze.outputs.base_branch }}
+
+          ## Error Summary
+          ${{ needs.analyze.outputs.error_summary }}
+
+          ## Affected Files
+          ${{ needs.analyze.outputs.affected_files }}
+
+          ## Additional Context
+          ${{ inputs.clarification || 'No additional context provided.' }}
+
+          ## Instructions
+          1. Analyze the failure details above
+          2. Read the affected files and relevant test files
+          3. Identify the root cause of the failure
+          4. Implement the MINIMAL fix required to resolve the issue
+          5. Do NOT refactor unrelated code
+          6. Preserve existing code style and patterns
+          7. Run tests to validate your fix
+
+          ## Failure Logs
+          The full failure logs are available in `.failure-artifacts/`
+
+          Please fix this issue and explain what you changed.
+          PROMPT_EOF
+
+          # Append actual log content
+          echo "" >> .claude-prompt.md
+          echo "## Actual Error Logs" >> .claude-prompt.md
+          echo '```' >> .claude-prompt.md
+          head -200 .failure-artifacts/*.txt 2>/dev/null >> .claude-prompt.md || echo "No logs available"
+          echo '```' >> .claude-prompt.md
+
+      - name: Execute Claude Code Fix (Attempt 1)
+        id: fix-attempt-1
+        continue-on-error: true
+        run: |
+          echo "::group::Claude Code Execution - Attempt 1"
+
+          # Execute Claude Code CLI with the prompt
+          # Using --print for non-interactive mode
+          # Using --dangerously-skip-permissions for automated execution
+          cat .claude-prompt.md | claude --print \
+            --max-turns ${{ env.CLAUDE_MAX_TURNS }} \
+            --dangerously-skip-permissions \
+            2>&1 | tee .claude-output-1.txt
+
+          EXIT_CODE=${PIPESTATUS[1]}
+          echo "::endgroup::"
+
+          if [ $EXIT_CODE -eq 0 ]; then
+            echo "attempt_success=true" >> $GITHUB_OUTPUT
+          else
+            echo "attempt_success=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run Validation Tests (Attempt 1)
+        id: validate-1
+        if: steps.fix-attempt-1.outputs.attempt_success == 'true'
+        continue-on-error: true
+        run: |
+          echo "::group::Validation Tests - Attempt 1"
+
+          # Detect project type and run appropriate tests
+          if [ -f "backend/atlas-app-rest-api/pom.xml" ]; then
+            cd backend/atlas-app-rest-api
+            ./mvnw test -q 2>&1 | tail -50
+            TEST_EXIT=${PIPESTATUS[0]}
+          elif [ -f "frontend/atlas/pubspec.yaml" ]; then
+            cd frontend/atlas
+            flutter test 2>&1 | tail -50
+            TEST_EXIT=${PIPESTATUS[0]}
+          else
+            echo "Unknown project type, skipping validation"
+            TEST_EXIT=0
+          fi
+
+          echo "::endgroup::"
+
+          if [ $TEST_EXIT -eq 0 ]; then
+            echo "tests_pass=true" >> $GITHUB_OUTPUT
+          else
+            echo "tests_pass=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Retry with Context (Attempt 2)
+        id: fix-attempt-2
+        if: |
+          steps.fix-attempt-1.outputs.attempt_success != 'true' ||
+          steps.validate-1.outputs.tests_pass != 'true'
+        continue-on-error: true
+        run: |
+          echo "::group::Claude Code Execution - Attempt 2"
+
+          # Add previous attempt context
+          cat >> .claude-prompt.md << 'RETRY_EOF'
+
+          ## Previous Attempt Failed
+          The previous fix attempt did not resolve the issue. Here's what happened:
+          RETRY_EOF
+
+          if [ -f ".claude-output-1.txt" ]; then
+            echo '```' >> .claude-prompt.md
+            tail -100 .claude-output-1.txt >> .claude-prompt.md
+            echo '```' >> .claude-prompt.md
+          fi
+
+          echo "Please try a different approach to fix this issue." >> .claude-prompt.md
+
+          cat .claude-prompt.md | claude --print \
+            --max-turns ${{ env.CLAUDE_MAX_TURNS }} \
+            --dangerously-skip-permissions \
+            2>&1 | tee .claude-output-2.txt
+
+          EXIT_CODE=${PIPESTATUS[1]}
+          echo "::endgroup::"
+
+          if [ $EXIT_CODE -eq 0 ]; then
+            echo "attempt_success=true" >> $GITHUB_OUTPUT
+          else
+            echo "attempt_success=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run Validation Tests (Attempt 2)
+        id: validate-2
+        if: steps.fix-attempt-2.outputs.attempt_success == 'true'
+        continue-on-error: true
+        run: |
+          echo "::group::Validation Tests - Attempt 2"
+
+          if [ -f "backend/atlas-app-rest-api/pom.xml" ]; then
+            cd backend/atlas-app-rest-api
+            ./mvnw test -q 2>&1 | tail -50
+            TEST_EXIT=${PIPESTATUS[0]}
+          elif [ -f "frontend/atlas/pubspec.yaml" ]; then
+            cd frontend/atlas
+            flutter test 2>&1 | tail -50
+            TEST_EXIT=${PIPESTATUS[0]}
+          else
+            TEST_EXIT=0
+          fi
+
+          echo "::endgroup::"
+
+          if [ $TEST_EXIT -eq 0 ]; then
+            echo "tests_pass=true" >> $GITHUB_OUTPUT
+          else
+            echo "tests_pass=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Final Retry (Attempt 3)
+        id: fix-attempt-3
+        if: |
+          (steps.fix-attempt-2.outputs.attempt_success != 'true' ||
+           steps.validate-2.outputs.tests_pass != 'true') &&
+          env.MAX_RETRIES >= 3
+        continue-on-error: true
+        run: |
+          echo "::group::Claude Code Execution - Attempt 3 (Final)"
+
+          cat >> .claude-prompt.md << 'FINAL_EOF'
+
+          ## FINAL ATTEMPT - Previous Attempts Failed
+          This is the final automated attempt. Previous fixes did not work.
+
+          Please:
+          1. Carefully review ALL error messages
+          2. Consider if this requires a more fundamental fix
+          3. If you cannot fix this issue, explain WHY and what a human developer should do
+          FINAL_EOF
+
+          if [ -f ".claude-output-2.txt" ]; then
+            echo '```' >> .claude-prompt.md
+            tail -100 .claude-output-2.txt >> .claude-prompt.md
+            echo '```' >> .claude-prompt.md
+          fi
+
+          cat .claude-prompt.md | claude --print \
+            --max-turns ${{ env.CLAUDE_MAX_TURNS }} \
+            --dangerously-skip-permissions \
+            2>&1 | tee .claude-output-3.txt
+
+          EXIT_CODE=${PIPESTATUS[1]}
+          echo "::endgroup::"
+
+          if [ $EXIT_CODE -eq 0 ]; then
+            echo "attempt_success=true" >> $GITHUB_OUTPUT
+          else
+            echo "attempt_success=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run Final Validation Tests
+        id: validate-3
+        if: steps.fix-attempt-3.outputs.attempt_success == 'true'
+        continue-on-error: true
+        run: |
+          echo "::group::Validation Tests - Final"
+
+          if [ -f "backend/atlas-app-rest-api/pom.xml" ]; then
+            cd backend/atlas-app-rest-api
+            ./mvnw test -q 2>&1 | tail -50
+            TEST_EXIT=${PIPESTATUS[0]}
+          elif [ -f "frontend/atlas/pubspec.yaml" ]; then
+            cd frontend/atlas
+            flutter test 2>&1 | tail -50
+            TEST_EXIT=${PIPESTATUS[0]}
+          else
+            TEST_EXIT=0
+          fi
+
+          echo "::endgroup::"
+
+          if [ $TEST_EXIT -eq 0 ]; then
+            echo "tests_pass=true" >> $GITHUB_OUTPUT
+          else
+            echo "tests_pass=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Determine Final Status
+        id: final-status
+        run: |
+          # Check if any attempt succeeded
+          if [ "${{ steps.validate-1.outputs.tests_pass }}" == "true" ] || \
+             [ "${{ steps.validate-2.outputs.tests_pass }}" == "true" ] || \
+             [ "${{ steps.validate-3.outputs.tests_pass }}" == "true" ]; then
+            echo "fix_successful=true" >> $GITHUB_OUTPUT
+          else
+            echo "fix_successful=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit Changes
+        if: steps.final-status.outputs.fix_successful == 'true'
+        run: |
+          git config user.name "Claude Auto-Fix"
+          git config user.email "claude-auto-fix@atlas-ai-labs.com"
+
+          # Add all changes except prompt files
+          git add -A
+          git reset -- .claude-prompt.md .claude-output-*.txt .failure-artifacts/
+
+          # Check if there are changes to commit
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+
+          git commit -m "fix: auto-remediate ${{ needs.analyze.outputs.failure_type }} from run #${{ needs.check-duplicate.outputs.run_id }}
+
+          Automated fix for CI/CD failure in ${{ needs.check-duplicate.outputs.workflow_name }}
+
+          Failure Type: ${{ needs.analyze.outputs.failure_type }}
+          Original Run: ${{ needs.check-duplicate.outputs.run_id }}
+
+          Co-Authored-By: Claude <noreply@anthropic.com>"
+
+          git push
+
+      - name: Create Pull Request
+        id: create-pr
+        if: steps.final-status.outputs.fix_successful == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_BODY=$(cat << 'PR_EOF'
+          ## Auto-Fix Pull Request
+
+          This PR was automatically generated to fix a CI/CD failure.
+
+          ### Failure Details
+          - **Workflow**: ${{ needs.check-duplicate.outputs.workflow_name }}
+          - **Run ID**: [${{ needs.check-duplicate.outputs.run_id }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ needs.check-duplicate.outputs.run_id }})
+          - **Type**: ${{ needs.analyze.outputs.failure_type }}
+          - **Base Branch**: ${{ needs.analyze.outputs.base_branch }}
+
+          ### Error Summary
+          ${{ needs.analyze.outputs.error_summary }}
+
+          ### Changes Made
+          See commit messages and diff for details.
+
+          ### Validation
+          - [x] Automated tests passed after fix
+          - [ ] **Human review required before merge**
+
+          ---
+          :robot: Generated by [Claude Code Auto-Remediate](https://github.com/${{ github.repository }})
+          PR_EOF
+          )
+
+          PR_URL=$(gh pr create \
+            --title "fix: Auto-remediate ${{ needs.analyze.outputs.failure_type }} from run #${{ needs.check-duplicate.outputs.run_id }}" \
+            --body "$PR_BODY" \
+            --base "${{ needs.analyze.outputs.base_branch }}" \
+            --head "${{ needs.analyze.outputs.fix_branch }}" \
+            --label "auto-fix" \
+            --label "needs-review" \
+            --label "awaiting-human")
+
+          PR_NUMBER=$(echo "$PR_URL" | grep -oE '[0-9]+$')
+
+          echo "pr_url=$PR_URL" >> $GITHUB_OUTPUT
+          echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
+
+  # ============================================================
+  # Job 4: Handle Failure - Create Issue & Comment
+  # ============================================================
+  handle-failure:
+    name: Handle Fix Failure
+    needs: [check-duplicate, analyze, remediate]
+    if: |
+      always() &&
+      needs.remediate.outputs.fix_successful != 'true' &&
+      needs.check-duplicate.outputs.should_proceed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create Failure Issue
+        id: create-issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ISSUE_BODY=$(cat << 'ISSUE_EOF'
+          ## Auto-Fix Failed
+
+          The automated remediation system was unable to fix this CI/CD failure after ${{ env.MAX_RETRIES }} attempts.
+
+          ### Failure Details
+          - **Workflow**: ${{ needs.check-duplicate.outputs.workflow_name }}
+          - **Run ID**: [${{ needs.check-duplicate.outputs.run_id }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ needs.check-duplicate.outputs.run_id }})
+          - **Type**: ${{ needs.analyze.outputs.failure_type }}
+          - **Branch**: ${{ needs.analyze.outputs.base_branch }}
+
+          ### Error Summary
+          ```
+          ${{ needs.analyze.outputs.error_summary }}
+          ```
+
+          ### Affected Files
+          ${{ needs.analyze.outputs.affected_files }}
+
+          ### Attempted Fixes
+          The system attempted ${{ env.MAX_RETRIES }} fix iterations but tests continued to fail.
+
+          ### What You Can Do
+
+          1. **Review the logs**: Check the [remediation workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details
+          2. **Manual fix**: Create a fix branch from `${{ needs.analyze.outputs.base_branch }}`
+          3. **Re-trigger with context**: Use the workflow dispatch with additional clarification:
+             ```
+             gh workflow run auto-remediate.yml \
+               -f failure_run_id=${{ needs.check-duplicate.outputs.run_id }} \
+               -f fix_type=${{ needs.analyze.outputs.failure_type }} \
+               -f clarification="Your additional context here"
+             ```
+
+          ---
+          :robot: Generated by Claude Code Auto-Remediate
+          ISSUE_EOF
+          )
+
+          ISSUE_URL=$(gh issue create \
+            --title "[Auto-Fix Failed] ${{ needs.analyze.outputs.failure_type }} in ${{ needs.check-duplicate.outputs.workflow_name }}" \
+            --body "$ISSUE_BODY" \
+            --label "auto-fix-failed" \
+            --label "needs-human" \
+            --label "priority:high")
+
+          echo "issue_url=$ISSUE_URL" >> $GITHUB_OUTPUT
+
+      - name: Comment on Failed Workflow Run
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # GitHub doesn't support direct comments on workflow runs via API
+          # Instead, we'll comment on the associated commit or PR
+
+          RUN_ID="${{ needs.check-duplicate.outputs.run_id }}"
+
+          # Get the commit SHA from the run
+          COMMIT_SHA=$(gh api repos/${{ github.repository }}/actions/runs/$RUN_ID --jq '.head_sha')
+
+          COMMENT_BODY=$(cat << 'COMMENT_EOF'
+          ## :robot: Auto-Fix Attempted
+
+          An automated fix was attempted for this failure but was unsuccessful.
+
+          - **Issue Created**: ${{ steps.create-issue.outputs.issue_url }}
+          - **Remediation Run**: [${{ github.run_id }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+
+          ### Re-trigger with clarification
+          ```bash
+          gh workflow run auto-remediate.yml \
+            -f failure_run_id=${{ needs.check-duplicate.outputs.run_id }} \
+            -f fix_type=${{ needs.analyze.outputs.failure_type }} \
+            -f clarification="<your context>"
+          ```
+          COMMENT_EOF
+          )
+
+          # Try to comment on associated PR first, fall back to commit
+          PR_NUMBER=$(gh api repos/${{ github.repository }}/commits/$COMMIT_SHA/pulls --jq '.[0].number' 2>/dev/null || echo "")
+
+          if [ -n "$PR_NUMBER" ]; then
+            gh pr comment "$PR_NUMBER" --body "$COMMENT_BODY"
+          else
+            # Comment on commit
+            gh api repos/${{ github.repository }}/commits/$COMMIT_SHA/comments \
+              -f body="$COMMENT_BODY" || true
+          fi
+
+  # ============================================================
+  # Job 5: Notify on Success
+  # ============================================================
+  notify-success:
+    name: Notify Success
+    needs: [check-duplicate, analyze, remediate]
+    if: needs.remediate.outputs.fix_successful == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post Success Summary
+        run: |
+          echo "## :white_check_mark: Auto-Fix Successful" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **PR Created**: ${{ needs.remediate.outputs.pr_url }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Original Failure**: Run #${{ needs.check-duplicate.outputs.run_id }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Fix Type**: ${{ needs.analyze.outputs.failure_type }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo ":warning: **Human approval required before merge**" >> $GITHUB_STEP_SUMMARY

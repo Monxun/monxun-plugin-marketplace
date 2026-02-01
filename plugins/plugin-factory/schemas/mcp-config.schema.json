@@ -1,0 +1,82 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://plugin-factory.dev/schemas/mcp-config.schema.json",
+  "title": "MCP Configuration Schema",
+  "description": "Schema for .mcp.json",
+  "type": "object",
+  "required": ["mcpServers"],
+  "properties": {
+    "mcpServers": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/definitions/mcpServer"
+      },
+      "description": "Map of server names to configurations"
+    }
+  },
+  "definitions": {
+    "mcpServer": {
+      "type": "object",
+      "required": ["command"],
+      "properties": {
+        "command": {
+          "type": "string",
+          "description": "Executable command (node, python, npx, etc.)"
+        },
+        "args": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Command arguments (use ${CLAUDE_PLUGIN_ROOT} for paths)"
+        },
+        "cwd": {
+          "type": "string",
+          "description": "Working directory (use ${CLAUDE_PLUGIN_ROOT})"
+        },
+        "env": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Environment variables (use ${VAR_NAME} for external vars)"
+        },
+        "scope": {
+          "type": "string",
+          "enum": ["user", "project"],
+          "default": "project",
+          "description": "Server scope"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "examples": [
+    {
+      "mcpServers": {
+        "database": {
+          "command": "node",
+          "args": ["${CLAUDE_PLUGIN_ROOT}/servers/db-server.js"],
+          "cwd": "${CLAUDE_PLUGIN_ROOT}",
+          "env": {
+            "DB_PATH": "${CLAUDE_PLUGIN_ROOT}/data/app.db"
+          }
+        }
+      }
+    },
+    {
+      "mcpServers": {
+        "api-client": {
+          "command": "python",
+          "args": ["-m", "api_server"],
+          "cwd": "${CLAUDE_PLUGIN_ROOT}/servers",
+          "env": {
+            "API_KEY": "${MY_API_KEY}",
+            "API_BASE_URL": "https://api.example.com"
+          }
+        }
+      }
+    }
+  ]
+}

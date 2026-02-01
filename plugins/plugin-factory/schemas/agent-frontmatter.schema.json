@@ -1,0 +1,62 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://plugin-factory.dev/schemas/agent-frontmatter.schema.json",
+  "title": "Agent Frontmatter Schema",
+  "description": "Schema for agent markdown YAML frontmatter",
+  "type": "object",
+  "required": ["name", "description"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+      "maxLength": 64,
+      "description": "Agent name in kebab-case"
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 1024,
+      "description": "Agent description with trigger keywords and capabilities"
+    },
+    "model": {
+      "type": "string",
+      "enum": [
+        "claude-sonnet-4-20250514",
+        "claude-haiku-4-20250514",
+        "claude-opus-4-20250514"
+      ],
+      "default": "claude-sonnet-4-20250514",
+      "description": "Model to use for agent"
+    },
+    "allowed-tools": {
+      "type": "string",
+      "description": "Comma-separated list of allowed tools"
+    },
+    "permissionMode": {
+      "type": "string",
+      "enum": ["default", "plan", "autoAccept"],
+      "default": "default",
+      "description": "Permission mode: default (prompts), plan (read-only), autoAccept (auto-approve)"
+    },
+    "context": {
+      "type": "string",
+      "enum": ["fork", "inherit"],
+      "default": "fork",
+      "description": "Context mode"
+    },
+    "skills": {
+      "type": "string",
+      "description": "Comma-separated skills to inject"
+    },
+    "max-turns": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Maximum conversation turns"
+    },
+    "timeout": {
+      "type": "integer",
+      "minimum": 1000,
+      "description": "Timeout in milliseconds"
+    }
+  },
+  "additionalProperties": true
+}

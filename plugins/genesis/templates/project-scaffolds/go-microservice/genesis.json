@@ -1,0 +1,71 @@
+{
+  "name": "go-microservice",
+  "version": "1.0.0",
+  "description": "Go microservice with standard project layout",
+  "variables": {
+    "project_name": {
+      "type": "string",
+      "required": true,
+      "description": "Project name (lowercase, no spaces)"
+    },
+    "module_path": {
+      "type": "string",
+      "required": true,
+      "description": "Go module path (e.g., github.com/user/repo)"
+    },
+    "description": {
+      "type": "string",
+      "default": "A Go microservice",
+      "description": "Project description"
+    },
+    "go_version": {
+      "type": "string",
+      "default": "1.22",
+      "description": "Go version"
+    },
+    "port": {
+      "type": "number",
+      "default": 8080,
+      "description": "HTTP server port"
+    },
+    "use_grpc": {
+      "type": "boolean",
+      "default": false,
+      "description": "Include gRPC support"
+    },
+    "database": {
+      "type": "string",
+      "enum": [
+        "none",
+        "postgresql",
+        "mysql",
+        "mongodb"
+      ],
+      "default": "postgresql",
+      "description": "Database type"
+    },
+    "use_redis": {
+      "type": "boolean",
+      "default": false,
+      "description": "Include Redis client"
+    },
+    "use_docker": {
+      "type": "boolean",
+      "default": true,
+      "description": "Include Dockerfile"
+    }
+  },
+  "files": [
+    "go.mod.template",
+    "Makefile.template",
+    "cmd/server/main.go.template",
+    "internal/config/config.go.template",
+    "internal/handler/handler.go.template",
+    "internal/service/service.go.template",
+    "Dockerfile.template"
+  ],
+  "postGenerate": [
+    "go mod tidy",
+    "go fmt ./..."
+  ]
+}

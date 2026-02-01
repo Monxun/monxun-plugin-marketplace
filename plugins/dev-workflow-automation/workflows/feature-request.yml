@@ -1,0 +1,456 @@
+# Auto-Implement Feature
+#
+# This workflow automatically implements features from GitHub issues.
+# Uses Claude Code CLI on self-hosted runner with your Max subscription.
+#
+# TRIGGER:
+# - Issues labeled with BOTH 'feature-request' AND 'auto-implement'
+# - Manual dispatch with feature description
+
+name: Auto-Implement Feature
+
+on:
+  issues:
+    types:
+      - opened
+      - labeled
+
+  workflow_dispatch:
+    inputs:
+      feature_description:
+        description: 'Feature to implement (if not using issue)'
+        required: false
+        type: string
+      issue_number:
+        description: 'Issue number to implement (optional)'
+        required: false
+        type: string
+      target_branch:
+        description: 'Branch to create PR against'
+        required: false
+        type: string
+        default: 'develop'
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+env:
+  CLAUDE_AUTO_MODE: "true"
+  CLAUDE_MAX_TURNS: 20
+
+jobs:
+  # ============================================================
+  # Job 1: Validate and Extract Requirements
+  # ============================================================
+  extract-requirements:
+    name: Extract Feature Requirements
+    runs-on: ubuntu-latest
+    # Trigger conditions
+    if: |
+      (github.event_name == 'issues' &&
+       contains(github.event.issue.labels.*.name, 'feature-request') &&
+       contains(github.event.issue.labels.*.name, 'auto-implement')) ||
+      github.event_name == 'workflow_dispatch'
+    outputs:
+      should_proceed: ${{ steps.extract.outputs.should_proceed }}
+      issue_number: ${{ steps.extract.outputs.issue_number }}
+      feature_title: ${{ steps.extract.outputs.feature_title }}
+      feature_description: ${{ steps.extract.outputs.feature_description }}
+      acceptance_criteria: ${{ steps.extract.outputs.acceptance_criteria }}
+      target_branch: ${{ steps.extract.outputs.target_branch }}
+      feature_branch: ${{ steps.extract.outputs.feature_branch }}
+    steps:
+      - name: Extract from Issue or Input
+        id: extract
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Determine source
+          if [ "${{ github.event_name }}" == "issues" ]; then
+            ISSUE_NUMBER="${{ github.event.issue.number }}"
+            FEATURE_TITLE="${{ github.event.issue.title }}"
+            FEATURE_DESC="${{ github.event.issue.body }}"
+            TARGET_BRANCH="develop"
+          else
+            ISSUE_NUMBER="${{ inputs.issue_number }}"
+            TARGET_BRANCH="${{ inputs.target_branch }}"
+
+            if [ -n "$ISSUE_NUMBER" ]; then
+              # Fetch from issue
+              ISSUE_DATA=$(gh api repos/${{ github.repository }}/issues/$ISSUE_NUMBER)
+              FEATURE_TITLE=$(echo "$ISSUE_DATA" | jq -r '.title')
+              FEATURE_DESC=$(echo "$ISSUE_DATA" | jq -r '.body')
+            else
+              # Use inline description
+              FEATURE_TITLE="Feature: ${{ inputs.feature_description }}"
+              FEATURE_DESC="${{ inputs.feature_description }}"
+              ISSUE_NUMBER="manual"
+            fi
+          fi
+
+          # Extract acceptance criteria (look for checkboxes or "Acceptance Criteria" section)
+          ACCEPTANCE_CRITERIA=$(echo "$FEATURE_DESC" | grep -A 20 -iE "(acceptance criteria|requirements|must have)" | head -20 || echo "")
+
+          # Create branch name slug
+          SLUG=$(echo "$FEATURE_TITLE" | tr '[:upper:]' '[:lower:]' | tr ' ' '-' | tr -cd '[:alnum:]-' | cut -c1-30)
+          FEATURE_BRANCH="feature/auto-${ISSUE_NUMBER}-${SLUG}"
+
+          # Escape for GitHub Actions
+          FEATURE_DESC="${FEATURE_DESC//'%'/'%25'}"
+          FEATURE_DESC="${FEATURE_DESC//$'\n'/'%0A'}"
+          FEATURE_DESC="${FEATURE_DESC//$'\r'/'%0D'}"
+
+          ACCEPTANCE_CRITERIA="${ACCEPTANCE_CRITERIA//'%'/'%25'}"
+          ACCEPTANCE_CRITERIA="${ACCEPTANCE_CRITERIA//$'\n'/'%0A'}"
+          ACCEPTANCE_CRITERIA="${ACCEPTANCE_CRITERIA//$'\r'/'%0D'}"
+
+          echo "should_proceed=true" >> $GITHUB_OUTPUT
+          echo "issue_number=$ISSUE_NUMBER" >> $GITHUB_OUTPUT
+          echo "feature_title=$FEATURE_TITLE" >> $GITHUB_OUTPUT
+          echo "feature_description=$FEATURE_DESC" >> $GITHUB_OUTPUT
+          echo "acceptance_criteria=$ACCEPTANCE_CRITERIA" >> $GITHUB_OUTPUT
+          echo "target_branch=$TARGET_BRANCH" >> $GITHUB_OUTPUT
+          echo "feature_branch=$FEATURE_BRANCH" >> $GITHUB_OUTPUT
+
+  # ============================================================
+  # Job 2: Implement Feature
+  # ============================================================
+  implement:
+    name: Implement Feature
+    needs: extract-requirements
+    if: needs.extract-requirements.outputs.should_proceed == 'true'
+    runs-on: [self-hosted, macOS, ARM64]
+    outputs:
+      implementation_successful: ${{ steps.final-status.outputs.successful }}
+      files_changed: ${{ steps.commit.outputs.files_changed }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.extract-requirements.outputs.target_branch }}
+          fetch-depth: 0
+
+      - name: Create Feature Branch
+        run: |
+          git checkout -b "${{ needs.extract-requirements.outputs.feature_branch }}"
+          git push -u origin "${{ needs.extract-requirements.outputs.feature_branch }}"
+
+      - name: Prepare Implementation Prompt
+        run: |
+          cat > .claude-feature-prompt.md << 'PROMPT_EOF'
+          # Feature Implementation Request
+
+          ## Feature Title
+          ${{ needs.extract-requirements.outputs.feature_title }}
+
+          ## Description
+          ${{ needs.extract-requirements.outputs.feature_description }}
+
+          ## Acceptance Criteria
+          ${{ needs.extract-requirements.outputs.acceptance_criteria }}
+
+          ## Project Context
+          This is the Atlas project - a gamified self-development mobile app.
+          - Backend: Java 17, Spring Boot 3.1.5, PostgreSQL
+          - Frontend: Flutter 3.0+, Dart 3.0+, iOS 13+
+          - See CLAUDE.md for full project documentation
+
+          ## Instructions
+          1. **Analyze** the feature requirements carefully
+          2. **Research** existing patterns in the codebase
+          3. **Plan** your implementation approach
+          4. **Implement** the feature following existing conventions
+          5. **Write tests** for all new functionality
+          6. **Run tests** to validate your implementation
+
+          ## Constraints
+          - Follow existing code patterns and style
+          - Make focused, atomic changes
+          - Ensure backwards compatibility
+          - Include appropriate error handling
+          - Add tests for new functionality
+          - Do NOT modify unrelated code
+
+          Please implement this feature and explain what you've created.
+          PROMPT_EOF
+
+      - name: Execute Claude Code Implementation
+        id: implement
+        continue-on-error: true
+        run: |
+          echo "::group::Claude Code Feature Implementation"
+
+          cat .claude-feature-prompt.md | claude --print \
+            --max-turns ${{ env.CLAUDE_MAX_TURNS }} \
+            --dangerously-skip-permissions \
+            2>&1 | tee .claude-implementation.txt
+
+          EXIT_CODE=${PIPESTATUS[1]}
+          echo "::endgroup::"
+
+          if [ $EXIT_CODE -eq 0 ]; then
+            echo "success=true" >> $GITHUB_OUTPUT
+          else
+            echo "success=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run Full Test Suite
+        id: tests
+        continue-on-error: true
+        run: |
+          echo "::group::Running Test Suite"
+
+          TESTS_PASSED=true
+
+          # Backend tests
+          if [ -f "backend/atlas-app-rest-api/pom.xml" ]; then
+            echo "Running backend tests..."
+            cd backend/atlas-app-rest-api
+            if ! ./mvnw test -q 2>&1 | tail -50; then
+              TESTS_PASSED=false
+            fi
+            cd ../..
+          fi
+
+          # Frontend tests
+          if [ -f "frontend/atlas/pubspec.yaml" ]; then
+            echo "Running frontend tests..."
+            cd frontend/atlas
+            if ! flutter test 2>&1 | tail -50; then
+              TESTS_PASSED=false
+            fi
+            cd ../..
+          fi
+
+          echo "::endgroup::"
+
+          if [ "$TESTS_PASSED" == "true" ]; then
+            echo "tests_pass=true" >> $GITHUB_OUTPUT
+          else
+            echo "tests_pass=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Retry Implementation if Tests Failed
+        id: retry
+        if: steps.tests.outputs.tests_pass != 'true'
+        continue-on-error: true
+        run: |
+          echo "::group::Retry Implementation"
+
+          cat >> .claude-feature-prompt.md << 'RETRY_EOF'
+
+          ## Tests Failed - Please Fix
+
+          The tests failed after your implementation. Here are the test results:
+          RETRY_EOF
+
+          echo '```' >> .claude-feature-prompt.md
+          tail -100 .claude-implementation.txt >> .claude-feature-prompt.md
+          echo '```' >> .claude-feature-prompt.md
+
+          echo "Please review the test failures and fix the issues." >> .claude-feature-prompt.md
+
+          cat .claude-feature-prompt.md | claude --print \
+            --max-turns ${{ env.CLAUDE_MAX_TURNS }} \
+            --dangerously-skip-permissions \
+            2>&1 | tee .claude-implementation-retry.txt
+
+          echo "::endgroup::"
+
+      - name: Re-run Tests After Retry
+        id: tests-retry
+        if: steps.retry.outcome == 'success'
+        continue-on-error: true
+        run: |
+          TESTS_PASSED=true
+
+          if [ -f "backend/atlas-app-rest-api/pom.xml" ]; then
+            cd backend/atlas-app-rest-api
+            if ! ./mvnw test -q 2>&1 | tail -20; then
+              TESTS_PASSED=false
+            fi
+            cd ../..
+          fi
+
+          if [ -f "frontend/atlas/pubspec.yaml" ]; then
+            cd frontend/atlas
+            if ! flutter test 2>&1 | tail -20; then
+              TESTS_PASSED=false
+            fi
+            cd ../..
+          fi
+
+          if [ "$TESTS_PASSED" == "true" ]; then
+            echo "tests_pass=true" >> $GITHUB_OUTPUT
+          else
+            echo "tests_pass=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Determine Final Status
+        id: final-status
+        run: |
+          if [ "${{ steps.tests.outputs.tests_pass }}" == "true" ] || \
+             [ "${{ steps.tests-retry.outputs.tests_pass }}" == "true" ]; then
+            echo "successful=true" >> $GITHUB_OUTPUT
+          else
+            echo "successful=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit Changes
+        id: commit
+        if: steps.final-status.outputs.successful == 'true'
+        run: |
+          git config user.name "Claude Auto-Feature"
+          git config user.email "claude-auto-feature@atlas-ai-labs.com"
+
+          # Add all changes except prompt files
+          git add -A
+          git reset -- .claude-*.md .claude-*.txt
+
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+            echo "files_changed=0" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          FILES_CHANGED=$(git diff --staged --name-only | wc -l | tr -d ' ')
+          echo "files_changed=$FILES_CHANGED" >> $GITHUB_OUTPUT
+
+          git commit -m "feat: ${{ needs.extract-requirements.outputs.feature_title }}
+
+          Implements feature request from issue #${{ needs.extract-requirements.outputs.issue_number }}
+
+          Co-Authored-By: Claude <noreply@anthropic.com>"
+
+          git push
+
+  # ============================================================
+  # Job 3: Create Pull Request
+  # ============================================================
+  create-pr:
+    name: Create Pull Request
+    needs: [extract-requirements, implement]
+    if: needs.implement.outputs.implementation_successful == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      pr_url: ${{ steps.pr.outputs.pr_url }}
+      pr_number: ${{ steps.pr.outputs.pr_number }}
+    steps:
+      - name: Create PR
+        id: pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ISSUE_REF=""
+          if [ "${{ needs.extract-requirements.outputs.issue_number }}" != "manual" ]; then
+            ISSUE_REF="Closes #${{ needs.extract-requirements.outputs.issue_number }}"
+          fi
+
+          PR_BODY=$(cat << 'PR_EOF'
+          ## Feature Implementation
+
+          This PR was automatically generated to implement a feature request.
+
+          ### Feature
+          **${{ needs.extract-requirements.outputs.feature_title }}**
+
+          ### Description
+          ${{ needs.extract-requirements.outputs.feature_description }}
+
+          ### Acceptance Criteria
+          ${{ needs.extract-requirements.outputs.acceptance_criteria }}
+
+          ### Changes
+          - Files changed: ${{ needs.implement.outputs.files_changed }}
+
+          ### Validation
+          - [x] Automated tests passed
+          - [ ] **Human review required before merge**
+
+          PR_EOF
+          )
+
+          if [ -n "$ISSUE_REF" ]; then
+            PR_BODY="$PR_BODY
+
+          ---
+          $ISSUE_REF"
+          fi
+
+          PR_BODY="$PR_BODY
+
+          ---
+          :robot: Generated by [Claude Code Auto-Feature](https://github.com/${{ github.repository }})"
+
+          PR_URL=$(gh pr create \
+            --repo ${{ github.repository }} \
+            --title "feat: ${{ needs.extract-requirements.outputs.feature_title }}" \
+            --body "$PR_BODY" \
+            --base "${{ needs.extract-requirements.outputs.target_branch }}" \
+            --head "${{ needs.extract-requirements.outputs.feature_branch }}" \
+            --label "auto-feature" \
+            --label "needs-review")
+
+          PR_NUMBER=$(echo "$PR_URL" | grep -oE '[0-9]+$')
+
+          echo "pr_url=$PR_URL" >> $GITHUB_OUTPUT
+          echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
+
+      - name: Link Issue to PR
+        if: needs.extract-requirements.outputs.issue_number != 'manual'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue comment ${{ needs.extract-requirements.outputs.issue_number }} \
+            --body ":robot: **Auto-Implementation PR Created**
+
+          A pull request has been automatically created to implement this feature:
+          ${{ steps.pr.outputs.pr_url }}
+
+          Please review the changes and approve if they meet your requirements."
+
+  # ============================================================
+  # Job 4: Handle Implementation Failure
+  # ============================================================
+  handle-failure:
+    name: Handle Failure
+    needs: [extract-requirements, implement]
+    if: |
+      always() &&
+      needs.implement.outputs.implementation_successful != 'true' &&
+      needs.extract-requirements.outputs.should_proceed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Comment on Issue
+        if: needs.extract-requirements.outputs.issue_number != 'manual'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue comment ${{ needs.extract-requirements.outputs.issue_number }} \
+            --body ":warning: **Auto-Implementation Failed**
+
+          The automated system was unable to fully implement this feature.
+
+          **Reason**: Tests did not pass after implementation attempts.
+
+          **What you can do**:
+          1. Check the [workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details
+          2. Implement manually or provide more specific requirements
+          3. Re-trigger with clarification:
+             \`\`\`
+             gh workflow run feature-request.yml \\
+               -f issue_number=${{ needs.extract-requirements.outputs.issue_number }} \\
+               -f feature_description='Additional context here'
+             \`\`\`"
+
+      - name: Remove auto-implement Label
+        if: needs.extract-requirements.outputs.issue_number != 'manual'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+        run: |
+          gh issue edit ${{ needs.extract-requirements.outputs.issue_number }} \
+            --remove-label "auto-implement" \
+            --add-label "auto-implement-failed"

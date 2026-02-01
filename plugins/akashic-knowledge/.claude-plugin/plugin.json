@@ -1,0 +1,31 @@
+{
+  "name": "akashic-knowledge",
+  "version": "1.0.0",
+  "description": "Ultimate research and knowledge base plugin with multi-agent orchestration, agentic RAG, containerized vector/graph databases, and heuristics framework integration for cross-session knowledge persistence.",
+  "author": { "name": "monxun" },
+  "license": "MIT",
+  "repository": "https://github.com/monxun/claude-code-plugins",
+  "keywords": [
+    "research",
+    "knowledge-base",
+    "rag",
+    "vector-database",
+    "graph-database",
+    "multi-agent",
+    "heuristics",
+    "mcp",
+    "orchestration"
+  ],
+  "commands": "./commands/",
+  "agents": [
+    "./agents/orchestrator.md",
+    "./agents/researcher.md",
+    "./agents/extractor.md",
+    "./agents/synthesizer.md",
+    "./agents/validator.md",
+    "./agents/indexer.md",
+    "./agents/retriever.md"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./mcp/.mcp.json"
+}

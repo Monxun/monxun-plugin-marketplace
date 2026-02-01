@@ -1,0 +1,64 @@
+{
+  "name": "rust-cli",
+  "version": "1.0.0",
+  "description": "Rust CLI application with clap",
+  "variables": {
+    "project_name": {
+      "type": "string",
+      "required": true,
+      "description": "Project name (lowercase with hyphens)"
+    },
+    "description": {
+      "type": "string",
+      "default": "A Rust CLI application",
+      "description": "Project description"
+    },
+    "author": {
+      "type": "string",
+      "default": "",
+      "description": "Author name"
+    },
+    "license": {
+      "type": "string",
+      "enum": [
+        "MIT",
+        "Apache-2.0",
+        "GPL-3.0",
+        "BSD-3-Clause"
+      ],
+      "default": "MIT",
+      "description": "License type"
+    },
+    "rust_version": {
+      "type": "string",
+      "default": "1.79",
+      "description": "Minimum Rust version"
+    },
+    "use_async": {
+      "type": "boolean",
+      "default": false,
+      "description": "Include Tokio async runtime"
+    },
+    "use_config": {
+      "type": "boolean",
+      "default": true,
+      "description": "Include config file support"
+    },
+    "use_logging": {
+      "type": "boolean",
+      "default": true,
+      "description": "Include tracing for logging"
+    }
+  },
+  "files": [
+    "Cargo.toml.template",
+    "src/main.rs.template",
+    "src/cli.rs.template",
+    "src/config.rs.template",
+    "src/error.rs.template"
+  ],
+  "postGenerate": [
+    "cargo fmt",
+    "cargo check"
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "unity-mcp": {
+      "type": "http",
+      "url": "http://localhost:8080",
+      "description": "Unity MCP server exposing Editor tools via JSON-RPC 2.0. Provides scene manipulation, build pipeline, asset management, and VR component creation."
+    }
+  }
+}

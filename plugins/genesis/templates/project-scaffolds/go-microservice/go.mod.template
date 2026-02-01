@@ -1,0 +1,26 @@
+module {{ module_path }}
+
+go {{ go_version | default: '1.22' }}
+
+require (
+	github.com/go-chi/chi/v5 v5.1.0
+	github.com/go-chi/cors v1.2.1
+	github.com/joho/godotenv v1.5.1
+	go.uber.org/zap v1.27.0
+	{{#if database == 'postgresql'}}
+	github.com/jackc/pgx/v5 v5.6.0
+	{{/if}}
+	{{#if database == 'mysql'}}
+	github.com/go-sql-driver/mysql v1.8.1
+	{{/if}}
+	{{#if database == 'mongodb'}}
+	go.mongodb.org/mongo-driver v1.16.0
+	{{/if}}
+	{{#if use_redis}}
+	github.com/redis/go-redis/v9 v9.6.1
+	{{/if}}
+	{{#if use_grpc}}
+	google.golang.org/grpc v1.65.0
+	google.golang.org/protobuf v1.34.2
+	{{/if}}
+)

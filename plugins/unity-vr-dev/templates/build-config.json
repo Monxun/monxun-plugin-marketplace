@@ -1,0 +1,40 @@
+{
+  "$schema": "../schemas/build-config.schema.json",
+  "projectName": "MyVRApp",
+  "buildTarget": "Android",
+  "scriptingBackend": "IL2CPP",
+  "targetArchitecture": "ARM64",
+  "graphicsApi": "OpenGLES3",
+  "colorSpace": "Linear",
+  "minSdkVersion": 29,
+  "buildSystem": "Gradle",
+  "gradleCaching": true,
+  "outputPath": "Builds/QuestApp.apk",
+  "scenes": [
+    "Assets/Scenes/Main.unity",
+    "Assets/Scenes/Menu.unity"
+  ],
+  "keystore": {
+    "useCustom": false,
+    "path": "",
+    "alias": ""
+  },
+  "buildOptions": {
+    "development": true,
+    "allowDebugging": true,
+    "connectWithProfiler": false,
+    "stripEngineCode": false
+  },
+  "xr": {
+    "sdkVersion": "v74",
+    "interactionToolkit": true,
+    "handTracking": false,
+    "passthrough": false
+  },
+  "deployment": {
+    "autoInstall": true,
+    "autoLaunch": true,
+    "packageName": "com.company.myvrapp",
+    "activityName": "com.unity3d.player.UnityPlayerActivity"
+  }
+}

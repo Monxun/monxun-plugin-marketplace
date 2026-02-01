@@ -1,0 +1,66 @@
+{
+  "name": "react-vite",
+  "version": "1.0.0",
+  "description": "React + Vite application with TypeScript",
+  "variables": {
+    "project_name": {
+      "type": "string",
+      "required": true,
+      "description": "Project name (kebab-case)"
+    },
+    "description": {
+      "type": "string",
+      "default": "A React application built with Vite",
+      "description": "Project description"
+    },
+    "author": {
+      "type": "string",
+      "default": "",
+      "description": "Author name"
+    },
+    "use_router": {
+      "type": "boolean",
+      "default": true,
+      "description": "Include React Router"
+    },
+    "use_tailwind": {
+      "type": "boolean",
+      "default": true,
+      "description": "Include Tailwind CSS"
+    },
+    "use_testing": {
+      "type": "boolean",
+      "default": true,
+      "description": "Include Vitest for testing"
+    },
+    "state_management": {
+      "type": "string",
+      "enum": [
+        "none",
+        "zustand",
+        "jotai",
+        "redux"
+      ],
+      "default": "zustand",
+      "description": "State management library"
+    },
+    "node_version": {
+      "type": "string",
+      "default": "20",
+      "description": "Node.js version"
+    }
+  },
+  "files": [
+    "package.json.template",
+    "vite.config.ts.template",
+    "tsconfig.json.template",
+    "tailwind.config.js.template",
+    "index.html.template",
+    "src/main.tsx.template",
+    "src/App.tsx.template"
+  ],
+  "postGenerate": [
+    "npm install",
+    "npm run lint:fix"
+  ]
+}

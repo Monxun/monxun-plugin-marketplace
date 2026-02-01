@@ -1,0 +1,71 @@
+[project]
+name = "{{ project_name }}"
+version = "1.0.0"
+description = "{{ description }}"
+authors = [
+    {name = "{{ author_name }}"}
+]
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">={{ python_version }}"
+
+dependencies = [
+    "fastapi>=0.109.0",
+    "uvicorn[standard]>=0.27.0",
+    "pydantic>=2.5.0",
+    "pydantic-settings>=2.1.0",
+    {{#if database == 'postgresql'}}
+    "sqlalchemy>=2.0.25",
+    "asyncpg>=0.29.0",
+    "alembic>=1.13.0",
+    {{else if database == 'mysql'}}
+    "sqlalchemy>=2.0.25",
+    "aiomysql>=0.2.0",
+    "alembic>=1.13.0",
+    {{else if database == 'sqlite'}}
+    "sqlalchemy>=2.0.25",
+    "aiosqlite>=0.19.0",
+    "alembic>=1.13.0",
+    {{/if}}
+    "python-multipart>=0.0.6",
+    "httpx>=0.26.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.23.0",
+    "pytest-cov>=4.1.0",
+    "ruff>=0.1.14",
+    "mypy>=1.8.0",
+    {{#if database != 'none'}}
+    "sqlalchemy[mypy]>=2.0.25",
+    {{/if}}
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/{{ project_name }}"]
+
+[tool.ruff]
+target-version = "py{{ python_version | replace: '.', '' }}"
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP"]
+
+[tool.mypy]
+python_version = "{{ python_version }}"
+strict = true
+plugins = [
+    {{#if database != 'none'}}
+    "sqlalchemy.ext.mypy.plugin",
+    {{/if}}
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

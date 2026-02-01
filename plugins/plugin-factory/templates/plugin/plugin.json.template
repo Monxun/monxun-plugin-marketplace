@@ -1,0 +1,56 @@
+{
+  "name": "{{PLUGIN_NAME}}",
+  "version": "1.0.0",
+  "description": "{{PLUGIN_DESCRIPTION}}",
+  "author": {
+    "name": "{{AUTHOR_NAME}}",
+    "email": "{{AUTHOR_EMAIL}}"
+  },
+  "repository": "{{REPOSITORY_URL}}",
+  "keywords": [
+    "claude-code",
+    "plugin",
+    "{{KEYWORD_1}}",
+    "{{KEYWORD_2}}"
+  ],
+  "license": "MIT",
+  "commands": "./commands/",
+  "agents": "./agents/",
+  "skills": "./skills/",
+  "hooks": "./hooks/hooks.json",
+  "mcpServers": "./.mcp.json"
+}
+
+// Template Variables:
+// - {{PLUGIN_NAME}}: Plugin name in kebab-case (max 64 chars)
+// - {{PLUGIN_DESCRIPTION}}: Brief description (max 1024 chars)
+// - {{AUTHOR_NAME}}: Author's name
+// - {{AUTHOR_EMAIL}}: Author's email
+// - {{REPOSITORY_URL}}: Git repository URL (optional)
+// - {{KEYWORD_1}}, {{KEYWORD_2}}: Additional keywords
+//
+// Required Fields:
+// - name (kebab-case)
+// - version (semver)
+// - description
+//
+// Optional Fields:
+// - author
+// - repository
+// - keywords
+// - license
+// - commands (directory path)
+// - agents (directory path)
+// - skills (directory path)
+// - hooks (hooks.json path)
+// - mcpServers (.mcp.json path)
+//
+// Example:
+// {
+//   "name": "code-reviewer",
+//   "version": "1.0.0",
+//   "description": "Automated code review plugin with AI-powered analysis",
+//   "author": {"name": "Dev Team", "email": "dev@example.com"},
+//   "commands": "./commands/",
+//   "skills": "./skills/"
+// }

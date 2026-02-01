@@ -1,0 +1,164 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "{{TOOL_NAME}}",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/{{SCRIPT_NAME}}",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "{{TOOL_NAME}}",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/{{SCRIPT_NAME}}",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/{{SCRIPT_NAME}}",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/{{SCRIPT_NAME}}",
+            "timeout": 60
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "matcher": "{{AGENT_NAME}}",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/{{SCRIPT_NAME}}",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/{{SCRIPT_NAME}}",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/{{SCRIPT_NAME}}",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/{{SCRIPT_NAME}}",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "matcher": "{{TRIGGER}}",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/{{SCRIPT_NAME}}",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}
+
+// TEMPLATE VARIABLES:
+// - {{TOOL_NAME}}: Tool name pattern (e.g., "Write", "Bash", "Write|Edit")
+// - {{AGENT_NAME}}: Agent name pattern for subagent hooks
+// - {{SCRIPT_NAME}}: Script filename (e.g., "validate.py", "format.sh")
+// - {{TRIGGER}}: Trigger pattern for PreCompact ("manual", "auto")
+//
+// EVENT TYPES REFERENCE:
+//
+// PreToolUse - Before tool execution
+//   Input: { tool_name, tool_input }
+//   Exit 2: Blocks operation
+//
+// PostToolUse - After successful tool execution
+//   Input: { tool_name, tool_input, tool_response }
+//
+// Notification - On notification events
+//   Input: { notification_type, message }
+//   Matchers: "permission_prompt", "idle_prompt", "auth_success"
+//
+// Stop - When Claude stops responding
+//   Input: { stop_hook_active }
+//   Exit 2: Continues Claude
+//
+// SubagentStop - When subagent completes
+//   Input: { agent_name, result }
+//   Matcher: Agent name pattern
+//
+// SessionStart - When session begins
+//   Input: { session_id, source }
+//   Matchers: "startup", "resume", "clear", "compact"
+//
+// SessionEnd - When session ends
+//   Input: { session_id, reason }
+//
+// UserPromptSubmit - When user submits prompt
+//   Input: { prompt }
+//   Exit 2: Blocks prompt
+//
+// PreCompact - Before compaction
+//   Input: { trigger, custom_instructions }
+//   Matchers: "manual", "auto"
+//
+// HOOK TYPES:
+// - "command": Execute shell command
+// - "prompt": Evaluate with LLM (for Stop/SubagentStop)
+//
+// EXIT CODES:
+// - 0: Success, continue (parse JSON if present)
+// - 2: Block operation (stderr shown to Claude)
+// - Other: Non-blocking error, continues
+//
+// TIMEOUT: In seconds (default: 60)
+//
+// ENVIRONMENT VARIABLES:
+// - ${CLAUDE_PLUGIN_ROOT}: Plugin installation directory
+// - ${CLAUDE_PROJECT_DIR}: Project root directory

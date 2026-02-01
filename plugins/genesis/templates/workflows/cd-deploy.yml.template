@@ -1,0 +1,146 @@
+name: Deploy
+
+on:
+  push:
+    branches: [{{ default_branch | default: 'main' }}]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+env:
+  {{#if cloud == 'aws'}}
+  AWS_REGION: {{ aws_region | default: 'us-east-1' }}
+  {{/if}}
+  {{#if use_docker}}
+  REGISTRY: {{ registry | default: 'ghcr.io' }}
+  IMAGE_NAME: ${{ github.repository }}
+  {{/if}}
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    outputs:
+      image-tag: ${{ steps.meta.outputs.tags }}
+    {{#if use_docker}}
+    permissions:
+      contents: read
+      packages: write
+    {{/if}}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      {{#if use_docker}}
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,prefix=
+            type=ref,event=branch
+
+      - uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      {{/if}}
+
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: build
+    environment: staging
+    if: ${{ github.event_name == 'push' || github.event.inputs.environment == 'staging' }}
+
+    steps:
+      {{#if cloud == 'aws'}}
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      {{#if deploy_target == 'ecs'}}
+      - name: Deploy to ECS
+        run: |
+          aws ecs update-service \
+            --cluster staging-cluster \
+            --service {{ project_name }}-service \
+            --force-new-deployment
+      {{else if deploy_target == 'lambda'}}
+      - name: Deploy to Lambda
+        run: |
+          aws lambda update-function-code \
+            --function-name {{ project_name }}-staging \
+            --image-uri ${{ needs.build.outputs.image-tag }}
+      {{/if}}
+      {{/if}}
+
+      {{#if cloud == 'gcp'}}
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: {{ project_name }}-staging
+          region: {{ gcp_region | default: 'us-central1' }}
+          image: ${{ needs.build.outputs.image-tag }}
+      {{/if}}
+
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [build, deploy-staging]
+    environment: production
+    if: ${{ github.event.inputs.environment == 'production' }}
+
+    steps:
+      {{#if cloud == 'aws'}}
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      {{#if deploy_target == 'ecs'}}
+      - name: Deploy to ECS
+        run: |
+          aws ecs update-service \
+            --cluster production-cluster \
+            --service {{ project_name }}-service \
+            --force-new-deployment
+      {{/if}}
+      {{/if}}
+
+      {{#if cloud == 'gcp'}}
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: {{ project_name }}-production
+          region: {{ gcp_region | default: 'us-central1' }}
+          image: ${{ needs.build.outputs.image-tag }}
+      {{/if}}

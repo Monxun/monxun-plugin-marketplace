@@ -1,0 +1,102 @@
+---
+name: {{AGENT_NAME}}
+description: |
+  {{AGENT_DESCRIPTION}}
+  Use when: {{TRIGGER_KEYWORDS}}.
+  Capabilities: {{CAPABILITIES}}.
+model: {{MODEL}}
+allowed-tools: {{ALLOWED_TOOLS}}
+permissionMode: {{PERMISSION_MODE}}
+context: {{CONTEXT}}
+skills: {{SKILLS}}
+---
+
+# {{AGENT_TITLE}}
+
+{{AGENT_OVERVIEW}}
+
+## Purpose
+
+{{AGENT_PURPOSE}}
+
+## Workflow
+
+1. {{STEP_1}}
+2. {{STEP_2}}
+3. {{STEP_3}}
+
+## Input
+
+This agent expects:
+
+- **Required**: {{REQUIRED_INPUT}}
+- **Optional**: {{OPTIONAL_INPUT}}
+
+## Output
+
+This agent produces:
+
+- {{OUTPUT_1}}
+- {{OUTPUT_2}}
+
+## Integration
+
+### With Other Agents
+
+- **Upstream**: {{UPSTREAM_AGENTS}}
+- **Downstream**: {{DOWNSTREAM_AGENTS}}
+
+### With Skills
+
+This agent uses:
+- `{{SKILL_1}}` - {{SKILL_1_PURPOSE}}
+- `{{SKILL_2}}` - {{SKILL_2_PURPOSE}}
+
+## Best Practices
+
+1. {{BEST_PRACTICE_1}}
+2. {{BEST_PRACTICE_2}}
+3. {{BEST_PRACTICE_3}}
+
+---
+
+<!-- Template Variables:
+
+FRONTMATTER (Required):
+- {{AGENT_NAME}}: Agent name in kebab-case
+- {{AGENT_DESCRIPTION}}: Brief description with trigger keywords
+- {{MODEL}}: One of:
+  - claude-sonnet-4-20250514 (default, balanced)
+  - claude-haiku-4-20250514 (fast, lightweight)
+  - claude-opus-4-20250514 (complex reasoning)
+- {{ALLOWED_TOOLS}}: Comma-separated, examples:
+  - Read only: "Read"
+  - Read/search: "Read, Grep, Glob"
+  - Full access: "Read, Write, Edit, Bash, Glob, Grep"
+- {{PERMISSION_MODE}}: One of:
+  - default: Standard prompts
+  - plan: Read-only exploration
+  - autoAccept: Auto-approve edits
+
+FRONTMATTER (Optional):
+- {{CONTEXT}}: fork (isolated) or inherit (shared)
+- {{SKILLS}}: Skills to inject (skill-name-1, skill-name-2)
+
+CONTENT:
+- {{AGENT_TITLE}}: Human-readable title
+- {{AGENT_OVERVIEW}}: 1-2 sentence overview
+- {{AGENT_PURPOSE}}: Detailed purpose
+- {{STEP_*}}: Workflow steps
+- {{REQUIRED_INPUT}}: Required input description
+- {{OPTIONAL_INPUT}}: Optional input description
+- {{OUTPUT_*}}: Expected outputs
+- {{UPSTREAM_AGENTS}}: Agents that call this agent
+- {{DOWNSTREAM_AGENTS}}: Agents this agent calls
+- {{SKILL_*}}: Skills used
+- {{BEST_PRACTICE_*}}: Usage best practices
+
+MODEL SELECTION GUIDE:
+- Use haiku for: fast validation, simple queries, clarification
+- Use sonnet for: code generation, analysis, documentation
+- Use opus for: complex reasoning, architecture design
+-->

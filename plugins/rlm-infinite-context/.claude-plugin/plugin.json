@@ -1,0 +1,27 @@
+{
+  "name": "rlm-infinite-context",
+  "version": "1.0.0",
+  "description": "Recursive Language Model plugin for infinite context processing. Implements MIT's RLM technique to process arbitrarily long documents (10M+ tokens) by storing context externally and providing recursive search tools.",
+  "author": {
+    "name": "Claude Code Plugin"
+  },
+  "license": "MIT",
+  "commands": "./commands/",
+  "agents": [
+    "./agents/orchestrator.md",
+    "./agents/searcher.md"
+  ],
+  "skills": "./skills/",
+  "hooks": "./hooks/hooks.json",
+  "mcpServers": "./.mcp.json",
+  "keywords": [
+    "infinite-context",
+    "rlm",
+    "recursive-language-model",
+    "long-context",
+    "context-window",
+    "search",
+    "document-processing"
+  ],
+  "repository": "https://github.com/example/rlm-infinite-context"
+}

@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "rlm-context": {
+      "command": "python",
+      "args": ["-m", "rlm_server"],
+      "cwd": "${CLAUDE_PLUGIN_ROOT}/servers",
+      "env": {
+        "RLM_DATA_DIR": "${CLAUDE_PLUGIN_ROOT}/data",
+        "RLM_MAX_DEPTH": "10",
+        "RLM_CHUNK_SIZE": "4000",
+        "RLM_OVERLAP": "200",
+        "PYTHONPATH": "${CLAUDE_PLUGIN_ROOT}/servers"
+      }
+    }
+  }
+}

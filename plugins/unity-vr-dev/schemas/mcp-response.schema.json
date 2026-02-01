@@ -1,0 +1,175 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://unity-vr-dev.plugin/schemas/mcp-response.schema.json",
+  "title": "MCP Response",
+  "description": "JSON-RPC 2.0 response schema for Unity MCP server",
+  "oneOf": [
+    {
+      "title": "Success Response",
+      "type": "object",
+      "required": [
+        "jsonrpc",
+        "result",
+        "id"
+      ],
+      "properties": {
+        "jsonrpc": {
+          "type": "string",
+          "const": "2.0"
+        },
+        "result": {
+          "type": "object",
+          "properties": {
+            "content": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "type"
+                ],
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "text",
+                      "image",
+                      "resource"
+                    ]
+                  },
+                  "text": {
+                    "type": "string",
+                    "description": "Text content (when type is 'text')"
+                  },
+                  "data": {
+                    "type": "string",
+                    "description": "Base64 encoded data (when type is 'image')"
+                  },
+                  "mimeType": {
+                    "type": "string",
+                    "description": "MIME type for image content"
+                  },
+                  "uri": {
+                    "type": "string",
+                    "description": "Resource URI (when type is 'resource')"
+                  }
+                }
+              }
+            },
+            "tools": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "name",
+                  "description"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9-]*$",
+                    "description": "Tool identifier in kebab-case"
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "Human-readable tool description"
+                  },
+                  "inputSchema": {
+                    "type": "object",
+                    "description": "JSON Schema for tool input parameters"
+                  }
+                }
+              },
+              "description": "Tool list (for tools/list response)"
+            },
+            "resources": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "uri",
+                  "name"
+                ],
+                "properties": {
+                  "uri": {
+                    "type": "string",
+                    "description": "Resource URI"
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "Human-readable resource name"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "mimeType": {
+                    "type": "string"
+                  }
+                }
+              },
+              "description": "Resource list (for resources/list response)"
+            }
+          }
+        },
+        "id": {
+          "type": [
+            "integer",
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "title": "Error Response",
+      "type": "object",
+      "required": [
+        "jsonrpc",
+        "error",
+        "id"
+      ],
+      "properties": {
+        "jsonrpc": {
+          "type": "string",
+          "const": "2.0"
+        },
+        "error": {
+          "type": "object",
+          "required": [
+            "code",
+            "message"
+          ],
+          "properties": {
+            "code": {
+              "type": "integer",
+              "description": "JSON-RPC error code",
+              "enum": [
+                -32700,
+                -32600,
+                -32601,
+                -32602,
+                -32603,
+                -32000
+              ]
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable error message"
+            },
+            "data": {
+              "description": "Additional error data"
+            }
+          }
+        },
+        "id": {
+          "type": [
+            "integer",
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    }
+  ]
+}

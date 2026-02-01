@@ -1,0 +1,83 @@
+---
+name: {{SKILL_NAME}}
+description: |
+  {{SKILL_DESCRIPTION}}
+  Use when: {{TRIGGER_KEYWORDS}}.
+  Supports: {{CAPABILITIES}}.
+allowed-tools: {{ALLOWED_TOOLS}}
+model: {{MODEL}}
+context: {{CONTEXT}}
+agent: {{AGENT}}
+---
+
+# {{SKILL_TITLE}}
+
+{{SKILL_OVERVIEW}}
+
+## Core Patterns
+
+### Pattern 1: {{PATTERN_1_NAME}}
+
+```{{LANGUAGE}}
+{{PATTERN_1_CODE}}
+```
+
+### Pattern 2: {{PATTERN_2_NAME}}
+
+```{{LANGUAGE}}
+{{PATTERN_2_CODE}}
+```
+
+## Workflow
+
+1. **Step 1**: {{STEP_1_DESCRIPTION}}
+2. **Step 2**: {{STEP_2_DESCRIPTION}}
+3. **Step 3**: {{STEP_3_DESCRIPTION}}
+
+## Quick Reference
+
+| Item | Value |
+|------|-------|
+| {{REF_1_NAME}} | {{REF_1_VALUE}} |
+| {{REF_2_NAME}} | {{REF_2_VALUE}} |
+
+## Anti-Patterns
+
+| Anti-Pattern | Issue | Fix |
+|--------------|-------|-----|
+| {{ANTI_1}} | {{ANTI_1_ISSUE}} | {{ANTI_1_FIX}} |
+| {{ANTI_2}} | {{ANTI_2_ISSUE}} | {{ANTI_2_FIX}} |
+
+## Detailed References
+
+- [Overview](references/overview.md)
+- [Patterns](references/patterns.md)
+- [Examples](references/examples.md)
+
+---
+
+<!-- Template Variables:
+FRONTMATTER:
+- {{SKILL_NAME}}: Skill name in kebab-case
+- {{SKILL_DESCRIPTION}}: Brief description (< 1024 chars)
+- {{TRIGGER_KEYWORDS}}: Keywords that trigger this skill
+- {{CAPABILITIES}}: What this skill supports
+- {{ALLOWED_TOOLS}}: Comma-separated tool list
+- {{MODEL}}: Model (claude-sonnet-4-20250514, claude-haiku-4-20250514)
+- {{CONTEXT}}: Context mode (fork, inherit)
+- {{AGENT}}: Agent type (general-purpose, Explore, Plan)
+
+CONTENT:
+- {{SKILL_TITLE}}: Human-readable title
+- {{SKILL_OVERVIEW}}: 1-2 sentence overview
+- {{PATTERN_*}}: Code patterns
+- {{STEP_*}}: Workflow steps
+- {{REF_*}}: Quick reference items
+- {{ANTI_*}}: Anti-patterns to avoid
+- {{LANGUAGE}}: Code block language
+
+IMPORTANT:
+- Keep total lines < 500
+- Use references/ for detailed docs
+- Include trigger keywords in description
+-->

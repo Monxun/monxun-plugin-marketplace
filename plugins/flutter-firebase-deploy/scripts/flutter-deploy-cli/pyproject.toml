@@ -1,0 +1,93 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "flutter-deploy-cli"
+version = "1.0.0"
+description = "Beautiful CLI for automated Flutter app deployment"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+authors = [
+    {name = "Your Name", email = "you@example.com"}
+]
+keywords = [
+    "flutter",
+    "deployment",
+    "ios",
+    "android",
+    "fastlane",
+    "github-actions",
+    "ci-cd",
+    "automation",
+    "cli",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: MacOS",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Build Tools",
+    "Topic :: Software Development :: Quality Assurance",
+]
+
+dependencies = [
+    "rich>=13.7.0",
+    "questionary>=2.0.1",
+    "pyyaml>=6.0.1",
+    "typer>=0.9.0",
+    "pydantic>=2.5.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "black>=24.1.0",
+    "ruff>=0.1.0",
+    "mypy>=1.8.0",
+]
+
+[project.scripts]
+flutter-deploy = "flutter_deploy.cli:main"
+fd = "flutter_deploy.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/yourusername/flutterlaunch"
+Documentation = "https://github.com/yourusername/flutterlaunch#readme"
+Repository = "https://github.com/yourusername/flutterlaunch"
+Issues = "https://github.com/yourusername/flutterlaunch/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["flutter_deploy*"]
+
+[tool.setuptools.package-data]
+"*" = ["*.yaml", "*.yml", "*.json", "*.md"]
+
+[tool.black]
+line-length = 100
+target-version = ["py310", "py311", "py312"]
+
+[tool.ruff]
+line-length = 100
+select = ["E", "F", "I", "N", "W"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-v --cov=flutterlaunch --cov-report=term-missing"

@@ -1,0 +1,39 @@
+[package]
+name = "{{ project_name }}"
+version = "0.1.0"
+edition = "2021"
+rust-version = "{{ rust_version | default: '1.79' }}"
+description = "{{ description | default: 'A Rust CLI application' }}"
+{{#if author}}
+authors = ["{{ author }}"]
+{{/if}}
+license = "{{ license | default: 'MIT' }}"
+
+[dependencies]
+clap = { version = "4.5", features = ["derive", "env"] }
+anyhow = "1.0"
+thiserror = "1.0"
+
+{{#if use_async}}
+tokio = { version = "1.38", features = ["full"] }
+{{/if}}
+
+{{#if use_config}}
+serde = { version = "1.0", features = ["derive"] }
+toml = "0.8"
+directories = "5.0"
+{{/if}}
+
+{{#if use_logging}}
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+{{/if}}
+
+[dev-dependencies]
+assert_cmd = "2.0"
+predicates = "3.1"
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true

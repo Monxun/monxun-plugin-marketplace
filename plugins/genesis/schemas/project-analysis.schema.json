@@ -1,0 +1,262 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesis.dev/schemas/project-analysis.schema.json",
+  "title": "Project Analysis",
+  "description": "Schema for exemplar project analysis output",
+  "type": "object",
+  "required": [
+    "metadata",
+    "structure",
+    "dependencies"
+  ],
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "required": [
+        "name",
+        "language",
+        "analyzedAt"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Project name"
+        },
+        "language": {
+          "type": "string",
+          "enum": [
+            "typescript",
+            "javascript",
+            "python",
+            "go",
+            "rust",
+            "java",
+            "csharp"
+          ],
+          "description": "Primary language"
+        },
+        "framework": {
+          "type": "string",
+          "description": "Primary framework"
+        },
+        "analyzedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "version": {
+          "type": "string",
+          "description": "Project version if available"
+        }
+      }
+    },
+    "structure": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "monorepo",
+            "single-package",
+            "workspace"
+          ],
+          "description": "Project structure type"
+        },
+        "entryPoints": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Main entry point files"
+        },
+        "directories": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Key directories and their purposes"
+        },
+        "patterns": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "files": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "description": "Detected architectural patterns"
+        }
+      }
+    },
+    "dependencies": {
+      "type": "object",
+      "properties": {
+        "runtime": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Runtime dependencies with versions"
+        },
+        "development": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Development dependencies with versions"
+        },
+        "peer": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Peer dependencies"
+        }
+      }
+    },
+    "configuration": {
+      "type": "object",
+      "properties": {
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "json",
+                  "yaml",
+                  "toml",
+                  "ini",
+                  "env"
+                ]
+              },
+              "purpose": {
+                "type": "string"
+              }
+            }
+          },
+          "description": "Configuration files detected"
+        },
+        "environment": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "required": {
+                "type": "boolean"
+              },
+              "description": {
+                "type": "string"
+              }
+            }
+          },
+          "description": "Environment variables required"
+        }
+      }
+    },
+    "ci_cd": {
+      "type": "object",
+      "properties": {
+        "platform": {
+          "type": "string",
+          "enum": [
+            "github-actions",
+            "gitlab-ci",
+            "circleci",
+            "jenkins",
+            "none"
+          ],
+          "description": "CI/CD platform detected"
+        },
+        "workflows": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "path": {
+                "type": "string"
+              },
+              "triggers": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "description": "CI/CD workflows detected"
+        }
+      }
+    },
+    "testing": {
+      "type": "object",
+      "properties": {
+        "framework": {
+          "type": "string",
+          "description": "Testing framework"
+        },
+        "coverage": {
+          "type": "boolean",
+          "description": "Coverage reporting enabled"
+        },
+        "directories": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Test directories"
+        }
+      }
+    },
+    "recommendations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "string",
+            "enum": [
+              "structure",
+              "security",
+              "performance",
+              "maintainability"
+            ]
+          },
+          "priority": {
+            "type": "string",
+            "enum": [
+              "high",
+              "medium",
+              "low"
+            ]
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Analysis recommendations"
+    }
+  }
+}

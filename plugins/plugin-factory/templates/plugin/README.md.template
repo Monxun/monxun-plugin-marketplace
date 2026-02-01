@@ -1,0 +1,102 @@
+# {{PLUGIN_NAME}}
+
+{{PLUGIN_DESCRIPTION}}
+
+## Installation
+
+```bash
+# Clone the plugin
+git clone {{REPOSITORY_URL}}
+
+# Use with Claude Code
+claude --plugin-dir ./{{PLUGIN_NAME}}
+```
+
+## Features
+
+- **Feature 1**: {{FEATURE_1_DESCRIPTION}}
+- **Feature 2**: {{FEATURE_2_DESCRIPTION}}
+- **Feature 3**: {{FEATURE_3_DESCRIPTION}}
+
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| `/{{PLUGIN_NAME}}:{{COMMAND_1}}` | {{COMMAND_1_DESCRIPTION}} |
+| `/{{PLUGIN_NAME}}:{{COMMAND_2}}` | {{COMMAND_2_DESCRIPTION}} |
+
+## Skills
+
+This plugin includes the following skills:
+
+- **{{SKILL_1}}**: {{SKILL_1_DESCRIPTION}}
+- **{{SKILL_2}}**: {{SKILL_2_DESCRIPTION}}
+
+## Agents
+
+Available agents:
+
+- **{{AGENT_1}}**: {{AGENT_1_DESCRIPTION}}
+- **{{AGENT_2}}**: {{AGENT_2_DESCRIPTION}}
+
+## Configuration
+
+### Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `{{ENV_VAR_1}}` | {{REQUIRED}} | {{ENV_VAR_1_DESCRIPTION}} |
+
+### Hooks
+
+This plugin uses the following hooks:
+
+- `PreToolUse`: {{PRE_TOOL_USE_DESCRIPTION}}
+- `PostToolUse`: {{POST_TOOL_USE_DESCRIPTION}}
+
+## Usage Examples
+
+### Example 1: {{EXAMPLE_1_TITLE}}
+
+```bash
+{{EXAMPLE_1_COMMAND}}
+```
+
+### Example 2: {{EXAMPLE_2_TITLE}}
+
+```bash
+{{EXAMPLE_2_COMMAND}}
+```
+
+## Development
+
+### Structure
+
+```
+{{PLUGIN_NAME}}/
+├── .claude-plugin/
+│   └── plugin.json
+├── commands/
+├── agents/
+├── skills/
+├── hooks/
+└── README.md
+```
+
+### Testing
+
+```bash
+# Validate plugin structure
+claude --plugin-dir . -p "/help"
+
+# Run validation
+/{{PLUGIN_NAME}}:validate
+```
+
+## License
+
+{{LICENSE}}
+
+## Author
+
+{{AUTHOR_NAME}} <{{AUTHOR_EMAIL}}>
