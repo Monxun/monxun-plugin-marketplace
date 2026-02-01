@@ -26,6 +26,5 @@
     "./agents/test-agent.md",
     "./agents/knowledge-agent.md"
   ],
-  "skills": "./skills/",
-  "hooks": "./hooks/hooks.json"
+  "skills": "./skills/"
 }

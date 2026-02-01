@@ -69,9 +69,6 @@
       ]
     }
   },
-  "hooks": {
-    "file": "hooks/hooks.json"
-  },
   "workflows": {
     "auto-remediate": {
       "file": "workflows/auto-remediate.yml",

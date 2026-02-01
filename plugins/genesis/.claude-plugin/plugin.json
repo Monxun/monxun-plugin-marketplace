@@ -36,6 +36,5 @@
     "./agents/genesis-validator.md",
     "./agents/documenter.md"
   ],
-  "skills": "./skills/",
-  "hooks": "./hooks/hooks.json"
+  "skills": "./skills/"
 }

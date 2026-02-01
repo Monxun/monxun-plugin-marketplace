@@ -12,7 +12,6 @@
     "./agents/searcher.md"
   ],
   "skills": "./skills/",
-  "hooks": "./hooks/hooks.json",
   "mcpServers": "./.mcp.json",
   "keywords": [
     "infinite-context",
